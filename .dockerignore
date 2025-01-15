@@ -1,3 +1,6 @@
 .gitignore
 .env
 /target
+/migrations
+/.vscode
+.uki

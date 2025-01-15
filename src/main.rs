@@ -1,19 +1,34 @@
+use controller::auth::AuthController;
 use anyhow::Result;
-use axum::{routing::get, Router};
+use dixxxie::{
+  axum::{self, Router}, connection::{establish_connection, establish_redis_connection, DbPool, RedisPool}, controller::ApplyControllerOnRouter, setup
+};
+
+mod repository;
+mod controller;
+mod service;
+mod models;
+mod schema;
+
+#[allow(unused)]
+#[derive(Clone)]
+pub struct ServerState {
+  postgres: DbPool,
+  redis: RedisPool
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  if cfg!(debug_assertions) {
-    dotenv::dotenv().ok();
-  }
+  setup()?;
 
-
-  env_logger::init();
-
-  log::info!("Drochi mne hui");
+  let state = ServerState {
+    postgres: establish_connection()?,
+    redis: establish_redis_connection()?
+  };
 
   let router = Router::new()
-    .route("/", get(|| async {"ZALUPNIY SHERSHEN'"}));
+    .apply_controller(AuthController)
+    .with_state(state);
 
   let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
     .await?;

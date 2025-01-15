@@ -1,19 +1,18 @@
-# builder
 FROM rust:latest AS builder
 
-WORKDIR /root/builder
+WORKDIR /root/build
 
-RUN rustup target add x86_64-unknown-linux-musl
+COPY . .
 
-COPY ./ /root/builder
+RUN cargo build --release
 
-RUN cargo build --release --target x86_64-unknown-linux-musl
+# Runtime
+FROM debian:bookworm-slim
 
-# Runner
-FROM alpine:latest
+WORKDIR /app
 
-COPY --from=builder /root/builder/target/x86_64-unknown-linux-musl/release/user-service /usr/bin/user-service
+RUN apt-get update && apt-get install -y libssl3 libpq5 && apt-get clean
 
-WORKDIR /usr/bin
+COPY --from=builder /root/build/target/release/auth-service ./
 
-ENTRYPOINT ["user-service"]
+ENTRYPOINT ["/app/auth-service"]
