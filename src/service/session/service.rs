@@ -1,11 +1,9 @@
 #![allow(dead_code)]
-// use anyhow::Result;
 
 use axum::http::StatusCode;
 use chrono::{NaiveDateTime, Utc};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dixxxie::{connection::DbPooled, response::{HttpError, HttpResult}};
-use crate::{models::{Session, SessionCreate, User}, repository::session::SessionRepository, schema::sessions, service::jwt::JWTService};
+use crate::{models::{Session, SessionCreate, User}, repository::session::SessionRepository, service::jwt::JWTService};
 
 pub struct SessionService;
 
@@ -29,9 +27,7 @@ impl SessionService {
       last_activity: Self::get_current_time(),
     };
 
-    Ok(diesel::insert_into(sessions::table)
-      .values(&session)
-      .get_result::<Session>(db)?)
+    SessionRepository::add(db, session)
   }
 
   // обновляет jwt сессии
@@ -49,9 +45,7 @@ impl SessionService {
     jwt: String,
     check_active: bool
   ) -> HttpResult<Session> {
-    let session = sessions::table
-      .filter(sessions::columns::jwt.eq(jwt))
-      .first::<Session>(db)?;
+    let session = SessionRepository::find_by_jwt(db, jwt)?;
 
     if check_active && !session.is_active {
       return Err(HttpError::new("Сессия не была найдена", Some(StatusCode::BAD_REQUEST)));
@@ -66,9 +60,7 @@ impl SessionService {
     refresh: String,
     check_active: bool
   ) -> HttpResult<Session> {
-    let session = sessions::table
-      .filter(sessions::columns::refresh_token.eq(refresh))
-      .first::<Session>(db)?;
+    let session = SessionRepository::find_by_refresh(db, refresh)?;
 
     if check_active && !session.is_active {
       return Err(HttpError::new("Сессия не была найдена", Some(StatusCode::BAD_REQUEST)));
@@ -83,22 +75,13 @@ impl SessionService {
     db: &mut DbPooled,
     user: User,
     user_agent: &str,
-    check_active: bool,
-    create_if_not_exists: bool
   ) -> HttpResult<Session> {
-    let session = sessions::table
-      .filter(sessions::columns::user_id.eq(user.id))
-      .filter(sessions::columns::useragent.eq(user_agent))
-      .first::<Session>(db)?; // todo @ я хз, если записи нет оно вернёт Err или Ok. Хуй знает - нужно проверить
+    let session = SessionRepository::get(db, user.id, user_agent);
 
-    if check_active && !session.is_active {
-      if create_if_not_exists {
-        return Self::create(db, user, user_agent);
-      }
-
-      return Err(HttpError::new("Сессия не была найдена", Some(StatusCode::BAD_REQUEST)));
+    match session {
+      Ok(session) => Ok(session),
+      Err(diesel::NotFound) => Self::create(db, user, user_agent),
+      Err(e) => Err(e.into()),
     }
-
-    Ok(session)
   }
 }

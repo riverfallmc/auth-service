@@ -17,7 +17,7 @@ pub struct TokenRefresh {
 
 #[derive(Serialize)]
 pub struct TokenRefreshed {
-  jwt: String
+  pub jwt: String
 }
 
 impl AuthController {

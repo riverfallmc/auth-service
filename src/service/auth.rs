@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use crate::{controller::auth::TokenRefreshed, models::{UserAdd, UserLogin, UserLoginedData, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, schema::users, service::{jwt::JWTService, tfa::TFAService}};
+use crate::{controller::auth::TokenRefreshed, models::{UserLogin, UserLoginedData, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, service::{jwt::JWTService, tfa::TFAService}};
 use super::{hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::service::SessionService, tfa::TwoFactorResponse};
 use axum::Json;
-use diesel::RunQueryDsl;
 use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
 use hashbrown::HashMap;
 use reqwest::StatusCode;
@@ -79,7 +78,7 @@ impl AuthService {
     }
 
     // создаем сессию в любом случае
-    let session = SessionService::get(db, user, user_agent, true, true)?;
+    let session = SessionService::get(db, user, user_agent)?;
 
     Ok(Json(serde_json::to_value(session)?))
   }
@@ -102,13 +101,15 @@ impl AuthService {
       .await?;
 
     // добавляем юзера в наш бд
-    let id = diesel::insert_into(users::table)
-      .values::<UserAdd>(user.clone().into())
-      .execute(db)?;
+    let id = AuthRepository::add(db, &user.clone().into())?;
 
     Ok(Json(HttpMessage::new(&format!("Пользователь {} с Id {} был успешно зарегистрирован.", user.username, id))))
   }
 
+  // обновляет и возвращает jwt
+  // с помощью refresh токена
+
+  // todo @ проверка на то что refresh токен валиден
   pub async fn refresh(
     db: &mut DbPooled,
     refresh_token: String
@@ -118,7 +119,7 @@ impl AuthService {
 
     SessionService::update(db, session.id, &jwt)?;
 
-    todo!()
+    Ok(Json(TokenRefreshed { jwt }))
   }
 
   // регистрация пользователя

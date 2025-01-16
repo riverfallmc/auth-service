@@ -7,7 +7,7 @@ use dixxxie::connection::DbPool;
 pub struct UserService;
 
 impl UserService {
-  /// Добавляет игрока в базу данных
+  // добавляет игрока в базу данных
   pub async fn add_user(
     user: UserCreate
   ) -> Result<()> {

@@ -2,7 +2,7 @@
 
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dixxxie::{connection::DbPooled, response::HttpResult};
-use crate::{models::SessionUpdateJwt, schema::sessions};
+use crate::{models::{Session, SessionCreate, SessionUpdateJwt}, schema::sessions};
 
 pub struct SessionRepository;
 
@@ -17,5 +17,45 @@ impl SessionRepository {
       .execute(db)?;
 
     Ok(())
+  }
+
+  pub fn add(
+    db: &mut DbPooled,
+    session: SessionCreate
+  ) -> HttpResult<Session> {
+    Ok(diesel::insert_into(sessions::table)
+      .values(&session)
+      .get_result::<Session>(db)?)
+  }
+
+  pub fn find_by_refresh(
+    db: &mut DbPooled,
+    refresh: String
+  ) -> HttpResult<Session> {
+    Ok(sessions::table
+      .filter(sessions::columns::refresh_token.eq(refresh))
+      .first::<Session>(db)?)
+  }
+
+  pub fn find_by_jwt(
+    db: &mut DbPooled,
+    jwt: String
+  ) -> HttpResult<Session> {
+    Ok(sessions::table
+      .filter(sessions::columns::jwt.eq(jwt))
+      .first::<Session>(db)?)
+  }
+
+  pub fn get(
+    db: &mut DbPooled,
+    user_id: i32,
+    user_agent: &str,
+  ) -> diesel::result::QueryResult<Session> {
+    let session = sessions::table
+      .filter(sessions::columns::user_id.eq(user_id))
+      .filter(sessions::columns::useragent.eq(user_agent))
+      .first::<Session>(db)?;
+
+    Ok(session)
   }
 }

@@ -3,7 +3,6 @@
 use axum::http::StatusCode;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dixxxie::{connection::DbPooled, response::{HttpResult, HttpError}};
-use anyhow::Result;
 use crate::{models::{User, UserAdd}, schema::users};
 
 pub struct AuthRepository;
@@ -12,12 +11,10 @@ impl AuthRepository {
   pub fn add(
     db: &mut DbPooled,
     user: &UserAdd
-  ) -> Result<()> {
+  ) -> diesel::result::QueryResult<usize> {
     diesel::insert_into(users::table)
       .values(user)
-      .execute(db)?;
-
-    Ok(())
+      .execute(db)
   }
 
   pub fn find(
