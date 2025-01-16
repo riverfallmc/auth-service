@@ -76,7 +76,7 @@ impl JWTService {
     token: &str
   ) -> HttpResult<TokenData<Claims>> {
     decode::<Claims>(
-      &token,
+      token,
       &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
       &Validation::new(Algorithm::HS256),
     )

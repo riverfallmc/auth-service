@@ -16,10 +16,10 @@ pub struct TwoFactorRedisData {
   pub code: String
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct TwoFactorResponse {
   pub secret: String,
-  pub qr_url: String
+  pub qr: String
 }
 
 impl TFAService {
@@ -34,14 +34,13 @@ impl TFAService {
   // добавляет в редис
   pub fn add_login_attempt(
     redis: &mut RedisPooled,
-    user_id: i32,
-    _user_agent: &str
+    user_id: i32
   ) -> HttpResult<Json<HttpMessage>> {
-    let (redis_key, _) = Self::generate_redis_2fa_key(None);
+    let (redis_key, code) = Self::generate_redis_2fa_key(Some(user_id as u64));
 
     let data = TwoFactorRedisData {
       id: user_id,
-      code: String::new() // todo @ 2fa code
+      code: code.to_string()
     };
 
     let jsoned_2fa = serde_json::to_string(&data)?;
@@ -73,9 +72,10 @@ impl TFAService {
   }
 
   pub fn generate_2fa(
-    username: String
+    username: String,
+    secret: Option<String>
   ) -> HttpResult<(String, TOTP)> {
-    let secret = HasherService::generate_2fa_secret();
+    let secret = secret.unwrap_or(HasherService::generate_2fa_secret());
     let totp = TOTP::new(
       totp_rs::Algorithm::SHA1,
       6,

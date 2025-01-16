@@ -17,18 +17,6 @@ lazy_static::lazy_static! {
 pub struct UserRepository;
 
 impl UserRepository {
-  pub async fn get(
-    id: i32
-  ) -> Result<User> {
-    todo!()
-  }
-
-  pub async fn get_by_username(
-    id: i32
-  ) -> Result<User> {
-    todo!()
-  }
-
   pub async fn add(
     user: UserCreate
   ) -> Result<()> {

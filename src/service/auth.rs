@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{controller::auth::TokenRefreshed, models::{UserLogin, UserLoginedData, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, service::{jwt::JWTService, tfa::TFAService}};
+use crate::{controller::auth::JsonWebToken, models::{UserLogin,UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, service::{jwt::JWTService, tfa::TFAService}};
 use super::{hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::service::SessionService, tfa::TwoFactorResponse};
 use axum::Json;
 use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
@@ -30,13 +30,13 @@ impl AuthService {
       return Err(HttpError::new("К вашему профилю уже привязана двуфакторная аутентификация.", Some(StatusCode::CONFLICT)))
     }
 
-    let (secret, totp) = TFAService::generate_2fa(user.username)?;
+    let (secret, totp) = TFAService::generate_2fa(user.username, None)?;
 
     AuthRepository::update_totp(db, user.id, secret.clone())?;
 
     Ok(Json(TwoFactorResponse {
         secret,
-        qr_url: totp.get_qr_base64().unwrap_or_default(), // todo ETO CHTO NAHOOI
+        qr: format!("data:image/png;base64,{}", totp.get_qr_base64().unwrap_or_default()),
     }))
   }
 
@@ -44,12 +44,24 @@ impl AuthService {
   pub async fn confirm_2fa(
     db: &mut DbPooled,
     redis: &mut RedisPooled,
-    code: u64,
-  ) -> HttpResult<UserLoginedData> {
-    let _user = TFAService::get_login_attempt(redis, db, code)
-      .map_err(|_| HttpError::new("", Some(StatusCode::BAD_REQUEST)))?;
+    user_id: u64,
+    code: String,
+    user_agent: String
+  ) -> HttpResult<Json<crate::models::Session>> {
+    let user = TFAService::get_login_attempt(redis, db, user_id)
+      .map_err(|_| HttpError::new("Авторизируйтесь для этого действия", Some(StatusCode::UNAUTHORIZED)))?;
 
-    todo!()
+    let (_, totp) = TFAService::generate_2fa(user.username.clone(), user.totp_secret.clone())?;
+
+    if !totp.check_current(&code)? {
+      return Err(HttpError::new("Неверный код", Some(StatusCode::UNAUTHORIZED)));
+    }
+
+    TFAService::remove_login_attempt(redis, user_id)?;
+
+    Ok(Json(
+      SessionService::get(db, user, &user_agent)?
+    ))
   }
 
   // авторизация
@@ -72,7 +84,7 @@ impl AuthService {
     // то добавляем в редис запись на 3 минуты
     // и ждем пока игрок авторизируется
     if user.totp_secret.is_some() {
-      let data = TFAService::add_login_attempt(redis, user.id, user_agent)?;
+      let data = TFAService::add_login_attempt(redis, user.id)?;
 
       return Ok(Json(serde_json::to_value(data.0)?));
     }
@@ -92,7 +104,7 @@ impl AuthService {
     let (redis_key, _) = Self::generate_redis_confirm_key(Some(id));
     // ищем запись в редисе
     let record = RedisService::get::<String>(redis, &redis_key)?;
-      // .map_err(|_| Err(HttpError::new("You are not on the registration confirmation list!", Some(StatusCode::BAD_REQUEST))))?; // todo
+      // .map_err(|_| Err(HttpError::new("You are not on the registration confirmation list!", Some(StatusCode::BAD_REQUEST))))?; // TODO @ Доделать
     // десериализуем джон объект в пользователя
     let user = serde_json::from_str::<UserRegister>(&record)?;
 
@@ -109,17 +121,17 @@ impl AuthService {
   // обновляет и возвращает jwt
   // с помощью refresh токена
 
-  // todo @ проверка на то что refresh токен валиден
+  // TODO @ Проверка на то что refresh токен валиден
   pub async fn refresh(
     db: &mut DbPooled,
     refresh_token: String
-  ) -> HttpResult<Json<TokenRefreshed>> {
+  ) -> HttpResult<Json<JsonWebToken>> {
     let session = SessionService::get_by_refresh(db, refresh_token, true)?;
     let jwt = JWTService::generate(session.user_id)?;
 
     SessionService::update(db, session.id, &jwt)?;
 
-    Ok(Json(TokenRefreshed { jwt }))
+    Ok(Json(JsonWebToken { jwt }))
   }
 
   // регистрация пользователя
@@ -136,7 +148,7 @@ impl AuthService {
     // Отправляем письмо пользователю
     let (code, reg_id) = Self::generate_redis_confirm_key(None);
 
-    // todo: сделать структуру для каждого письма
+    // TODO: Сделать структуру для каждого письма
 
     let mail = Email::new(String::from("data/templates/register.html"), String::from("Регистрация"), {
       let mut hashmap = HashMap::new();

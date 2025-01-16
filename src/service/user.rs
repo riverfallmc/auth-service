@@ -14,11 +14,4 @@ impl UserService {
     UserRepository::add(user)
       .await
   }
-
-  pub async fn get_user(
-    id: i32
-  ) -> Result<User> {
-    UserRepository::get(id)
-      .await
-  }
 }
