@@ -11,7 +11,7 @@ lazy_static::lazy_static! {
   static ref CLIENT: Client = Client::new();
   static ref MAIL_SERVICE_URL: String = env::var("MAIL_URL")
     .expect("The URL_MAIL environment variable was not found!");
-  static ref MAIL_URL: String = format!("http://{}/send", MAIL_SERVICE_URL.to_string());
+  static ref MAIL_URL: String = format!("http://{}/send", *MAIL_SERVICE_URL);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,7 +21,6 @@ pub struct MailData {
   pub body: String,
 }
 
-
 pub struct MailService;
 
 impl MailService {
@@ -29,7 +28,6 @@ impl MailService {
     recipient: String,
     mail: Email
   ) -> anyhow::Result<Json<HttpMessage>> {
-    log::debug!("{}", MAIL_URL.to_string());
     CLIENT.post(MAIL_URL.to_string())
       .json(&MailData {
         to: recipient,

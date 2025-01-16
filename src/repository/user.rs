@@ -32,7 +32,7 @@ impl UserRepository {
   pub async fn add(
     user: UserCreate
   ) -> Result<()> {
-    CLIENT.post(format!("http://{}/user", USER_URL.to_string()))
+    CLIENT.post(format!("http://{}/user", *USER_URL))
       .json(&user)
       .send()
       .await

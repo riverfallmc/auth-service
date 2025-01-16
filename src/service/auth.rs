@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use crate::{models::{UserAdd, UserLogin, UserLoginedData, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, schema::users, service::tfa::TFAService};
-use super::{hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::SessionService, tfa::TwoFactorResponse};
+use crate::{controller::auth::TokenRefreshed, models::{UserAdd, UserLogin, UserLoginedData, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, schema::users, service::{jwt::JWTService, tfa::TFAService}};
+use super::{hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::service::SessionService, tfa::TwoFactorResponse};
 use axum::Json;
 use diesel::RunQueryDsl;
 use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
@@ -19,6 +19,7 @@ impl AuthService {
     (format!("register:{}", key), key)
   }
 
+  // привязка 2FA (TOTP) к профилю пользователя
   pub fn add_2fa(
     db: &mut DbPooled,
     jwt: String
@@ -40,6 +41,7 @@ impl AuthService {
     }))
   }
 
+  // продолжение авторизации (/login): ввод кода от 2FA (TOTP)
   pub async fn confirm_2fa(
     db: &mut DbPooled,
     redis: &mut RedisPooled,
@@ -47,7 +49,6 @@ impl AuthService {
   ) -> HttpResult<UserLoginedData> {
     let _user = TFAService::get_login_attempt(redis, db, code)
       .map_err(|_| HttpError::new("", Some(StatusCode::BAD_REQUEST)))?;
-
 
     todo!()
   }
@@ -77,8 +78,10 @@ impl AuthService {
       return Ok(Json(serde_json::to_value(data.0)?));
     }
 
-    // Ok(SessionService::get(user, user_agent))
-    todo!()
+    // создаем сессию в любом случае
+    let session = SessionService::get(db, user, user_agent, true, true)?;
+
+    Ok(Json(serde_json::to_value(session)?))
   }
 
   // подтверждение регистрации пользователя
@@ -106,13 +109,23 @@ impl AuthService {
     Ok(Json(HttpMessage::new(&format!("Пользователь {} с Id {} был успешно зарегистрирован.", user.username, id))))
   }
 
+  pub async fn refresh(
+    db: &mut DbPooled,
+    refresh_token: String
+  ) -> HttpResult<Json<TokenRefreshed>> {
+    let session = SessionService::get_by_refresh(db, refresh_token, true)?;
+    let jwt = JWTService::generate(session.user_id)?;
+
+    SessionService::update(db, session.id, &jwt)?;
+
+    todo!()
+  }
+
   // регистрация пользователя
   pub async fn register(
     redis: &mut RedisPooled,
     mut user: UserRegister,
   ) -> HttpResult<Json<HttpMessage>> {
-    // ! Ранк по умолчанию
-    user.rank = Some(String::from("user"));
     // оверрайдим значение (по идее оно вообще не должно быть документировано) поля salt
     user.salt = Some(HasherService::generate_salt());
     // ʕ•́ᴥ•̀ʔっ подготавливаем пользователя для хранения в редисе

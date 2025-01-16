@@ -33,7 +33,6 @@ pub struct UserAdd {
 pub struct UserCreate {
   pub username: String,
   pub email: String,
-  pub rank: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -41,7 +40,6 @@ pub struct UserRegister {
   pub username: String,
   pub password: String,
   pub email: String,
-  pub rank: Option<String>,
   // значение этого поля в любом случае будет стёрто
   // при выполнении запроса на эндпоинт /register
   pub salt: Option<String>
@@ -52,7 +50,6 @@ impl From<UserRegister> for UserCreate {
     UserCreate {
       username: value.username,
       email: value.email,
-      rank: value.rank
     }
   }
 }
@@ -101,13 +98,35 @@ pub struct Session {
   #[diesel(sql_type = Text)]
   pub useragent: String,
   #[diesel(sql_type = Text)]
-  pub token: String,
+  pub jwt: String,
+  #[diesel(sql_type = Text)]
+  pub refresh_token: String,
   #[diesel(sql_type = Boolean)]
   pub is_active: bool,
   #[diesel(sql_type = Timestamp)]
-  pub iat: NaiveDateTime,
-  #[diesel(sql_type = Timestamp)]
-  pub exp: NaiveDateTime,
+  pub last_activity: NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Insertable, Serialize, Deserialize, Clone)]
+#[diesel(table_name = sessions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SessionCreate {
+  #[diesel(sql_type = Integer)]
+  pub user_id: i32,
+  #[diesel(sql_type = Text)]
+  pub useragent: String,
+  #[diesel(sql_type = Text)]
+  pub jwt: String,
+  #[diesel(sql_type = Text)]
+  pub refresh_token: String,
   #[diesel(sql_type = Timestamp)]
   pub last_activity: NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Serialize, Deserialize, Clone)]
+#[diesel(table_name = sessions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SessionUpdateJwt {
+  #[diesel(sql_type = Text)]
+  pub jwt: String,
 }

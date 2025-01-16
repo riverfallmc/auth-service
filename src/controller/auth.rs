@@ -1,6 +1,6 @@
 use axum::{extract::{Query, State}, http::HeaderMap, routing::{get, post}, Json};
 use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use crate::{models::{UserLogin, UserRegister}, service::auth::AuthService, ServerState};
 
 pub struct AuthController;
@@ -8,6 +8,16 @@ pub struct AuthController;
 #[derive(Deserialize)]
 pub struct IdQuery {
   id: u64
+}
+
+#[derive(Deserialize)]
+pub struct TokenRefresh {
+  refresh_jwt: String
+}
+
+#[derive(Serialize)]
+pub struct TokenRefreshed {
+  jwt: String
 }
 
 impl AuthController {
@@ -38,6 +48,16 @@ impl AuthController {
       .await
   }
 
+  pub async fn refresh(
+    State(state): State<ServerState>,
+    Json(body): Json<TokenRefresh>,
+  ) -> HttpResult<Json<TokenRefreshed>> {
+    let mut db = state.postgres.get()?;
+
+    AuthService::refresh(&mut db, body.refresh_jwt)
+      .await
+  }
+
   pub async fn registration(
     State(state): State<ServerState>,
     Json(body): Json<UserRegister>,
@@ -55,6 +75,7 @@ impl Controller<ServerState> for AuthController {
       .route("/login", post(Self::login)) // логин
       .route("/register", post(Self::registration)) // регистрация
       .route("/confirm", get(Self::confirm)) // подтверждение регистрации
+      .route("/refresh", post(Self::refresh)) // обновление токена
       .route("/2fa/add", post(Self::confirm)) // 2fa - добавление
       .route("/2fa/confirm", post(Self::confirm)) // 2fa - подтверждение авторизации
   }

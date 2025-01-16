@@ -5,10 +5,9 @@ diesel::table! {
         id -> Int4,
         user_id -> Int4,
         useragent -> Text,
-        token -> Text,
+        jwt -> Text,
+        refresh_token -> Text,
         is_active -> Bool,
-        iat -> Timestamp,
-        exp -> Timestamp,
         last_activity -> Timestamp,
     }
 }

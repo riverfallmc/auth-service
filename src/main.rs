@@ -19,6 +19,7 @@ pub struct ServerState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+  dotenv::dotenv()?;
   setup()?;
 
   let state = ServerState {

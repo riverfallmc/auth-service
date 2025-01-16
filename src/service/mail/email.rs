@@ -5,7 +5,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use hashbrown::HashMap;
 
-const NO_TEMPLATE: &'static str = "Не получилось найти заготовку для электронного письма.";
+const NO_TEMPLATE: &str = "Не получилось найти заготовку для электронного письма.";
 
 #[derive(Serialize, Deserialize)]
 pub struct MailData {
