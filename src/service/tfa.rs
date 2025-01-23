@@ -24,28 +24,19 @@ pub struct TwoFactorResponse {
 
 impl TFAService {
   fn generate_redis_2fa_key(
-    key: Option<u64>
-  ) -> (String, u64) {
-    let key = key.unwrap_or(HasherService::generate_code());
-
-    (format!("2fa:{}", key), key)
+    key: String
+  ) -> String {
+    format!("2fa:{}", key)
   }
 
   // добавляет в редис
   pub fn add_login_attempt(
     redis: &mut RedisPooled,
-    user_id: i32
+    username: String
   ) -> HttpResult<Json<HttpMessage>> {
-    let (redis_key, code) = Self::generate_redis_2fa_key(Some(user_id as u64));
+    let redis_key = Self::generate_redis_2fa_key(username);
 
-    let data = TwoFactorRedisData {
-      id: user_id,
-      code: code.to_string()
-    };
-
-    let jsoned_2fa = serde_json::to_string(&data)?;
-
-    RedisService::set_temporarily(redis, &redis_key, jsoned_2fa, 3)?;
+    RedisService::set_temporarily(redis, &redis_key, 1, 5)?;
 
     Ok(Json(HttpMessage::new("Подтвердите вход с помощью TOTP кода (2FA).")))
   }
@@ -53,20 +44,20 @@ impl TFAService {
   pub fn get_login_attempt(
     redis: &mut RedisPooled,
     db: &mut DbPooled,
-    key: u64
+    username: String
   ) -> HttpResult<User> {
-    let (redis_key, _) = Self::generate_redis_2fa_key(Some(key));
-    let jsoned_data = RedisService::get::<String>(redis, &redis_key)?;
-    let data = serde_json::from_str::<TwoFactorRedisData>(&jsoned_data)?;
+    let redis_key = Self::generate_redis_2fa_key(username.clone());
 
-    AuthRepository::find(db, data.id)
+    RedisService::get::<String>(redis, &redis_key)?;
+
+    AuthRepository::find_by_username(db, &username)
   }
 
   pub fn remove_login_attempt(
     redis: &mut RedisPooled,
-    key: u64
+    username: String
   ) -> HttpResult<()> {
-    let (redis_key, _) = Self::generate_redis_2fa_key(Some(key));
+    let redis_key = Self::generate_redis_2fa_key(username);
 
     RedisService::remove(redis, &redis_key)
   }

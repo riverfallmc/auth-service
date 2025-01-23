@@ -11,8 +11,9 @@ pub struct IdQuery {
 }
 
 #[derive(Deserialize)]
-pub struct TFABody {
-  code: String
+pub struct TFAQuery {
+  u: String,
+  c: String
 }
 
 #[derive(Deserialize)]
@@ -71,14 +72,13 @@ impl AuthController {
   pub async fn confirm_2fa(
     headers: HeaderMap,
     State(state): State<ServerState>,
-    Query(params): Query<IdQuery>,
-    Json(body): Json<TFABody>,
+    Query(params): Query<TFAQuery>,
   ) -> HttpResult<Json<Session>> {
     let user_agent = Self::get_user_agent(headers);
     let mut redis = state.redis.get()?;
     let mut db = state.postgres.get()?;
 
-    AuthService::confirm_2fa(&mut db, &mut redis, params.id, body.code, user_agent)
+    AuthService::confirm_2fa(&mut db, &mut redis, params.u, params.c, user_agent)
       .await
   }
 

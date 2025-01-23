@@ -19,7 +19,6 @@ pub struct ServerState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  dotenv::dotenv()?;
   setup()?;
 
   let state = ServerState {
@@ -31,7 +30,7 @@ async fn main() -> Result<()> {
     .apply_controller(AuthController)
     .with_state(state);
 
-  let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+  let listener = tokio::net::TcpListener::bind("0.0.0.0:80")
     .await?;
 
   Ok(axum::serve(listener, router).await?)
