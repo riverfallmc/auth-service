@@ -1,5 +1,6 @@
-pub mod tfa;
 pub mod auth;
+pub mod authvalidate;
+pub mod tfa;
 pub mod hasher;
 pub mod jwt;
 pub mod redis;

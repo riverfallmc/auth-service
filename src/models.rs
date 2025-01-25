@@ -35,6 +35,12 @@ pub struct UserCreate {
   pub email: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct BaseUserInfo {
+  pub id: i32,
+  pub username: String
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserRegister {
   pub username: String,

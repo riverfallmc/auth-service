@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use crate::{controller::auth::JsonWebToken, models::{UserLogin,UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, service::{jwt::JWTService, tfa::TFAService}};
-use super::{hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::service::SessionService, tfa::TwoFactorResponse};
+use crate::{controller::auth::JsonWebToken, models::{BaseUserInfo, UserLogin, UserRegister}, repository::{auth::AuthRepository, user::UserRepository}, service::{jwt::JWTService, tfa::TFAService}};
+use super::{authvalidate::AuthValidateService, hasher::HasherService, mail::{email::Email, service::MailService}, redis::RedisService, session::service::SessionService, tfa::TwoFactorResponse};
 use axum::Json;
 use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
 use hashbrown::HashMap;
@@ -16,6 +16,20 @@ impl AuthService {
     let key = key.unwrap_or(HasherService::generate_code());
 
     (format!("register:{}", key), key)
+  }
+
+  pub fn get_owner(
+    db: &mut DbPooled,
+    token: String
+  ) -> HttpResult<Json<BaseUserInfo>> {
+    let session = SessionService::get_by_jwt(db, token, true)?;
+    let user_id = session.user_id;
+    let user = AuthRepository::find(db, user_id)?;
+
+    Ok(Json(BaseUserInfo {
+      id: user_id,
+      username: user.username
+    }))
   }
 
   // привязка 2FA (TOTP) к профилю пользователя
@@ -126,11 +140,11 @@ impl AuthService {
     refresh_token: String
   ) -> HttpResult<Json<JsonWebToken>> {
     let session = SessionService::get_by_refresh(db, refresh_token, true)?;
-    let jwt = JWTService::generate(session.user_id)?;
+    let token = JWTService::generate(session.user_id)?;
 
-    SessionService::update(db, session.id, &jwt)?;
+    SessionService::update(db, session.id, &token)?;
 
-    Ok(Json(JsonWebToken { jwt }))
+    Ok(Json(JsonWebToken { token }))
   }
 
   // регистрация пользователя
@@ -138,6 +152,7 @@ impl AuthService {
     redis: &mut RedisPooled,
     mut user: UserRegister,
   ) -> HttpResult<Json<HttpMessage>> {
+    AuthValidateService::validate(user.clone())?;
     // оверрайдим значение (по идее оно вообще не должно быть документировано) поля salt
     user.salt = Some(HasherService::generate_salt());
     // ʕ•́ᴥ•̀ʔっ подготавливаем пользователя для хранения в редисе

@@ -1,7 +1,7 @@
 use axum::{extract::{Query, State}, http::HeaderMap, routing::{get, post}, Json};
 use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
 use serde::{Deserialize, Serialize};
-use crate::{models::{Session, UserLogin, UserRegister}, service::{auth::AuthService, tfa::TwoFactorResponse}, ServerState};
+use crate::{models::{BaseUserInfo, Session, UserLogin, UserRegister}, service::{auth::AuthService, tfa::TwoFactorResponse}, ServerState};
 
 pub struct AuthController;
 
@@ -23,7 +23,7 @@ pub struct RefreshToken {
 
 #[derive(Serialize, Deserialize)]
 pub struct JsonWebToken {
-  pub jwt: String
+  pub token: String
 }
 
 impl AuthController {
@@ -49,13 +49,22 @@ impl AuthController {
       .await
   }
 
+  pub async fn get_token_owner(
+    State(state): State<ServerState>,
+    Json(body): Json<JsonWebToken>
+  ) -> HttpResult<Json<BaseUserInfo>> {
+    let mut db = state.postgres.get()?;
+
+    AuthService::get_owner(&mut db, body.token)
+  }
+
   pub async fn add_2fa(
     State(state): State<ServerState>,
     Json(body): Json<JsonWebToken>,
   ) -> HttpResult<Json<TwoFactorResponse>>{
     let mut db = state.postgres.get()?;
 
-    AuthService::add_2fa(&mut db, body.jwt)
+    AuthService::add_2fa(&mut db, body.token)
   }
 
   pub async fn confirm(
@@ -110,6 +119,7 @@ impl Controller<ServerState> for AuthController {
       .route("/register", post(Self::registration)) // регистрация
       .route("/confirm", get(Self::confirm)) // подтверждение регистрации
       .route("/refresh", post(Self::refresh)) // обновление токена
+      .route("/owner", post(Self::get_token_owner)) // возвращает владельца токена
       .route("/2fa/add", post(Self::add_2fa)) // 2fa - добавление
       .route("/2fa/confirm", post(Self::confirm_2fa)) // 2fa - подтверждение авторизации
   }
