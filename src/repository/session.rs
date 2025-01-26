@@ -46,14 +46,26 @@ impl SessionRepository {
       .first::<Session>(db)?)
   }
 
+  pub fn delete(
+    db: &mut DbPooled,
+    id: i32
+  ) -> HttpResult<()> {
+    diesel::update(sessions::table.filter(sessions::id.eq(id)))
+      .set(sessions::is_active.eq(false))
+      .execute(db)?;
+
+    Ok(())
+  }
+
   pub fn get(
     db: &mut DbPooled,
     user_id: i32,
     user_agent: &str,
   ) -> diesel::result::QueryResult<Session> {
     let session = sessions::table
-      .filter(sessions::columns::user_id.eq(user_id))
-      .filter(sessions::columns::useragent.eq(user_agent))
+      .filter(sessions::user_id.eq(user_id))
+      .filter(sessions::useragent.eq(user_agent))
+      .filter(sessions::is_active.eq(true))
       .first::<Session>(db)?;
 
     Ok(session)

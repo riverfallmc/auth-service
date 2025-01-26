@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -19,6 +21,21 @@ pub struct User {
   pub totp_secret: Option<String>,
   #[diesel(sql_type = Nullable<Jsonb>)]
   pub backup_codes: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+pub struct UserInUserService {
+  pub id: i32,
+  pub username: String,
+  pub email: String,
+  pub rank: String,
+  pub registered_at: NaiveDateTime
+}
+
+#[derive(Serialize)]
+pub struct UserPasswordUpdate {
+  pub salt: String,
+  pub password: String
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]

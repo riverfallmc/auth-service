@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
 use std::env;
-use axum::Json;
-use dixxxie::response::HttpMessage;
+use dixxxie::response::HttpResult;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use super::email::Email;
@@ -24,10 +23,15 @@ pub struct MailData {
 pub struct MailService;
 
 impl MailService {
-  pub async fn send(
+  pub async fn send<T>(
     recipient: String,
-    mail: Email
-  ) -> anyhow::Result<Json<HttpMessage>> {
+    mail: T
+  ) -> HttpResult<()>
+  where
+    T: TryInto<Email, Error = anyhow::Error>,
+  {
+    let mail: Email = mail.try_into()?;
+
     CLIENT.post(MAIL_URL.to_string())
       .json(&MailData {
         to: recipient,
@@ -39,6 +43,6 @@ impl MailService {
       .map_err(|e| anyhow::anyhow!("Не получилось отправить запрос на сервис mail: {e}"))?
       .error_for_status()?;
 
-    Ok(Json(HttpMessage::new("Подтвердите вашу регистрацию с помощью ссылки, высланной на вашу почту.")))
+    Ok(())
   }
 }

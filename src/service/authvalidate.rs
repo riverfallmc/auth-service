@@ -12,25 +12,47 @@ const MIN_PASSWORD: usize = 8;
 const MAX_PASSWORD: usize = 32;
 
 impl AuthValidateService {
-  pub fn validate(
-    user: UserRegister
+  fn validate_spell(
+    text: String,
+    kind: &str
   ) -> HttpResult<()> {
-    let username = user.username;
+    if text.is_empty() ||
+    !text.chars().all(|c| c.is_alphanumeric() || c == '_') ||
+    !text.chars().any(|c| c.is_alphanumeric())
+    {
+      let msg = format!("{kind} должен содержать хотя бы одну букву или цифру, и может содержать только буквы (a-Z), цифры (0-9) и подчёркивания (_)");
 
+      return Err(HttpError(anyhow::anyhow!(msg), Some(StatusCode::BAD_REQUEST)));
+    }
+
+    Ok(())
+  }
+
+  pub fn validate_username(
+    username: String
+  ) -> HttpResult<()> {
     if !(MIN_USERNAME..=MAX_USERNAME).contains(&username.len()) {
       return Err(HttpError::new("Никнейм должен быть больше 4 и меньше 17 символов", Some(StatusCode::BAD_REQUEST)))
     }
 
-    if !(MIN_PASSWORD..=MAX_PASSWORD).contains(&user.password.len()) {
+    Self::validate_spell(username, "Никнейм")
+  }
+
+  pub fn validate_password(
+    password: String
+  ) -> HttpResult<()> {
+    if !(MIN_PASSWORD..=MAX_PASSWORD).contains(&password.len()) {
       return Err(HttpError::new("Пароль должен быть больше 7 и меньше 33 символов", Some(StatusCode::BAD_REQUEST)))
     }
 
-    if username.is_empty() ||
-      !username.chars().all(|c| c.is_alphanumeric() || c == '_') ||
-      !username.chars().any(|c| c.is_alphanumeric())
-    {
-      return Err(HttpError::new("Никнейм должен содержать хотя бы одну букву или цифру, и может содержать только буквы (a-Z), цифры (0-9) и подчёркивания (_)", Some(StatusCode::BAD_REQUEST)));
-    }
+    Self::validate_spell(password, "Пароль")
+  }
+
+  pub fn validate(
+    user: UserRegister
+  ) -> HttpResult<()> {
+    Self::validate_username(user.username.clone())?;
+    Self::validate_password(user.password.clone())?;
 
     Ok(())
   }

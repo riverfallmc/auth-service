@@ -1,26 +1,27 @@
 #![allow(unused)]
 
 use std::env;
-use crate::{models::{User, UserCreate}, schema::users};
+use crate::{models::{User, UserCreate, UserInUserService}, schema::users};
 use anyhow::{bail, Result};
-use dixxxie::{connection::{DbPool, DbPooled}};
+use dixxxie::{connection::{DbPool, DbPooled}, response::HttpResult};
 use diesel::{insert_into, ExpressionMethods, QueryDsl, RunQueryDsl};
+use once_cell::sync::Lazy;
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-lazy_static::lazy_static! {
-  static ref CLIENT: Client = Client::new();
-  static ref USER_URL: String = env::var("USER_URL")
-    .expect("The USER_URL environment variable was not found!");
-}
-
-pub struct UserRepository;
+static CLIENT: Lazy<Client> = Lazy::new(Client::new);
+static USER_URL: Lazy<String> = Lazy::new(|| {
+  env::var("USER_URL")
+    .expect("The USER_URL environment variable was not found!")
+});
 
 #[derive(Deserialize)]
 struct Response {
   is_error: Option<bool>,
   message: String
 }
+
+pub struct UserRepository;
 
 impl UserRepository {
   pub async fn add(
@@ -42,5 +43,20 @@ impl UserRepository {
     }
 
     Ok(())
+  }
+
+  pub async fn find_by_email(
+    email: String
+  ) -> Result<UserInUserService> {
+    let res = CLIENT.get(format!("http://{}/user/0?email={}", *USER_URL, email))
+      .send()
+      .await
+      .map_err(|e| anyhow::anyhow!("Не получилось отправить запрос на сервис user: {e}"))?
+      .error_for_status()?;
+
+    let json = res.json::<UserInUserService>()
+      .await?;
+
+    Ok(json)
   }
 }

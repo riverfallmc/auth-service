@@ -3,12 +3,14 @@ use anyhow::Result;
 use dixxxie::{
   axum::{self, Router}, connection::{establish_connection, establish_redis_connection, DbPool, RedisPool}, controller::ApplyControllerOnRouter, setup
 };
+use controller::recovery::RecoveryController;
 
 mod repository;
 mod controller;
 mod service;
 mod models;
 mod schema;
+mod misc;
 
 #[allow(unused)]
 #[derive(Clone)]
@@ -28,6 +30,7 @@ async fn main() -> Result<()> {
 
   let router = Router::new()
     .apply_controller(AuthController)
+    .apply_controller(RecoveryController)
     .with_state(state);
 
   let listener = tokio::net::TcpListener::bind("0.0.0.0:80")

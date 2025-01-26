@@ -28,13 +28,13 @@ impl HasherService {
       .collect()
   }
 
-  // генерирует случайное число
-  // которое может использоваться как айди
-  pub fn generate_code() -> u64 {
-    let mut rng = rand::thread_rng();
-
-    // ну.. эта запись выглядит не очень
-    rng.gen_range(MIN_CODE..=MAX_CODE)
+  // генерирует код, для чего-нибудь
+  pub fn generate_code() -> String {
+    rand::thread_rng()
+      .sample_iter(&Alphanumeric)
+      .take(32)
+      .map(char::from)
+      .collect()
   }
 
   pub fn generate_2fa_secret() -> String {

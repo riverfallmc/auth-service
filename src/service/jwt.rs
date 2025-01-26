@@ -5,23 +5,25 @@ use reqwest::StatusCode;
 use serde::{Serialize, Deserialize};
 use dixxxie::response::{HttpError, HttpResult};
 
+use super::time::TimeService;
+
 lazy_static::lazy_static! {
-    static ref JWT_SECRET: String = std::env::var("JWT_SECRET")
-        .expect("The JWT_SECRET environment variable was not found!");
+  static ref JWT_SECRET: String = std::env::var("JWT_SECRET")
+    .expect("The JWT_SECRET environment variable was not found!");
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
   sub: String,
   exp: usize,
-  refresh: Option<bool>,
+  refresh: bool,
 }
 
 pub struct JWTService;
 
 impl JWTService {
   // проверяет валидность JWT токена
-  pub fn is_valid(token: String) -> bool {
+  pub fn is_valid(token: &str) -> bool {
     let parts = token.split('.')
       .collect::<Vec<&str>>();
 
@@ -30,11 +32,27 @@ impl JWTService {
     }
 
     decode::<Claims>(
-      &token,
+      token,
       &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
       &Validation::new(Algorithm::HS256),
     )
     .is_ok()
+  }
+
+  pub fn is_active(
+    token: String
+  ) -> HttpResult<String> {
+    if !Self::is_valid(&token) {
+      return Err(HttpError::new("Невалидный токен", Some(StatusCode::UNAUTHORIZED)))
+    }
+
+    let payload = Self::decode_token(&token)?;
+
+    if payload.claims.exp < (TimeService::get_current_timestamp() as usize) {
+      return Err(HttpError::new("Токен истёк", Some(StatusCode::UNAUTHORIZED)))
+    }
+
+    Ok(payload.claims.sub)
   }
 
   // генерация jwt (действует 1 час)
@@ -44,7 +62,7 @@ impl JWTService {
     let claims = Claims {
       sub: user_id.to_string(),
       exp: Self::calculate_exp(60),
-      refresh: None,
+      refresh: false,
     };
 
     encode(
@@ -61,7 +79,7 @@ impl JWTService {
     let claims = Claims {
       sub: user_id.to_string(),
       exp: Self::calculate_exp(60 * 24 * 7),
-      refresh: Some(true),
+      refresh: true,
     };
 
     encode(
@@ -87,7 +105,7 @@ impl JWTService {
   fn calculate_exp(
     minutes: usize
   ) -> usize {
-    let now = chrono::Utc::now().timestamp() as usize;
+    let now = TimeService::get_current_timestamp() as usize;
     now + minutes * 60
   }
 }

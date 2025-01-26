@@ -1,18 +1,14 @@
 #![allow(dead_code)]
 
 use axum::http::StatusCode;
-use chrono::{NaiveDateTime, Utc};
 use dixxxie::{connection::DbPooled, response::{HttpError, HttpResult}};
 use crate::{models::{Session, SessionCreate, User}, repository::session::SessionRepository, service::jwt::JWTService};
+
+use super::time::TimeService;
 
 pub struct SessionService;
 
 impl SessionService {
-  // возвращает текущее время, не зависимое от временной зоны
-  fn get_current_time() -> NaiveDateTime {
-    Utc::now().naive_utc()
-  }
-
   // создает запись сессии
   pub fn create(
     db: &mut DbPooled,
@@ -24,7 +20,7 @@ impl SessionService {
       useragent: user_agent.to_owned(),
       jwt: JWTService::generate(user.id)?,
       refresh_token: JWTService::generate_refresh(user.id)?,
-      last_activity: Self::get_current_time(),
+      last_activity: TimeService::get_current_time(),
     };
 
     SessionRepository::add(db, session)
@@ -45,9 +41,9 @@ impl SessionService {
     jwt: String,
     check_active: bool
   ) -> HttpResult<Session> {
-    let session = SessionRepository::find_by_jwt(db, jwt)?;
+    let session = SessionRepository::find_by_jwt(db, jwt.clone())?;
 
-    if check_active && !session.is_active {
+    if check_active && (!session.is_active || JWTService::is_active(jwt).is_err()) {
       return Err(HttpError::new("Сессия не была найдена", Some(StatusCode::BAD_REQUEST)));
     }
 
@@ -60,13 +56,20 @@ impl SessionService {
     refresh: String,
     check_active: bool
   ) -> HttpResult<Session> {
-    let session = SessionRepository::find_by_refresh(db, refresh)?;
+    let session = SessionRepository::find_by_refresh(db, refresh.clone())?;
 
-    if check_active && !session.is_active {
+    if check_active && (!session.is_active || JWTService::is_active(refresh).is_err()) {
       return Err(HttpError::new("Сессия не была найдена", Some(StatusCode::BAD_REQUEST)));
     }
 
     Ok(session)
+  }
+
+  pub fn delete(
+    db: &mut DbPooled,
+    id: i32
+  ) -> HttpResult<()> {
+    SessionRepository::delete(db, id)
   }
 
   // ищет сессию по user_id и useragent
@@ -76,10 +79,25 @@ impl SessionService {
     user: User,
     user_agent: &str,
   ) -> HttpResult<Session> {
-    let session = SessionRepository::get(db, user.id, user_agent);
+    let session_result = SessionRepository::get(db, user.id, user_agent);
 
-    match session {
-      Ok(session) => Ok(session),
+    match session_result {
+      Ok(mut session) => {
+        if JWTService::is_active(session.refresh_token.clone()).is_err() {
+          Self::delete(db, session.id)?;
+          return Self::create(db, user, user_agent);
+        }
+
+        if JWTService::is_active(session.jwt.clone()).is_err() {
+          let new_jwt = JWTService::generate(session.user_id)?;
+
+          SessionService::update(db, session.id, &new_jwt)?;
+
+          session.jwt = new_jwt;
+        }
+
+        Ok(session)
+      },
       Err(diesel::NotFound) => Self::create(db, user, user_agent),
       Err(e) => Err(e.into()),
     }
