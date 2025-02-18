@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use axum::Json;
-use crate::{controller::auth::JsonWebToken, models::{BaseUserInfo, UserLogin}, repository::auth::AuthRepository, service::jwt::JWTService};
+use crate::{models::{BaseUserInfo, Session, UserLogin}, repository::{auth::AuthRepository, session::SessionRepository}, service::jwt::JWTService};
 use super::{hasher::HasherService, logic::tfa::TFAService, session::SessionService};
 use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpResult}};
 use reqwest::StatusCode;
@@ -59,12 +59,10 @@ impl AuthService {
   pub async fn refresh(
     db: &mut DbPooled,
     refresh_token: String
-  ) -> HttpResult<Json<JsonWebToken>> {
+  ) -> HttpResult<Json<Session>> {
     let session = SessionService::get_by_refresh(db, refresh_token, true)?;
     let token = JWTService::generate(session.user_id)?;
 
-    SessionService::update(db, session.id, &token)?;
-
-    Ok(Json(JsonWebToken { token }))
+    Ok(Json(SessionRepository::update(db, session.id, token)?))
   }
 }

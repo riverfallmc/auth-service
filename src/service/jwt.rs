@@ -28,6 +28,7 @@ impl JWTService {
       .collect::<Vec<&str>>();
 
     if parts.len() != 3 {
+      println!("3");
       return false; // Неправильный формат JWT
     }
 
@@ -69,7 +70,7 @@ impl JWTService {
       &Header::new(Algorithm::HS256),
       &claims,
       &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
-    ).map_err(|_| HttpError::new("Не получилось сгенерировать Refresh токен", None))
+    ).map_err(|_| HttpError::new("Не получилось сгенерировать JWT", None))
   }
 
   // генерация refresh токена (действует 7 дней)

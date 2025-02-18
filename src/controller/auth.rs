@@ -1,7 +1,7 @@
 use axum::{extract::State, http::HeaderMap, routing::post, Json};
 use dixxxie::{controller::Controller, response::HttpResult};
 use serde::{Deserialize, Serialize};
-use crate::{misc::UserAgent, models::{BaseUserInfo, UserLogin}, service::auth::AuthService, ServerState};
+use crate::{misc::UserAgent, models::{BaseUserInfo, Session, UserLogin}, service::auth::AuthService, ServerState};
 
 pub struct AuthController;
 
@@ -41,7 +41,7 @@ impl AuthController {
   pub async fn refresh(
     State(state): State<ServerState>,
     Json(body): Json<RefreshToken>,
-  ) -> HttpResult<Json<JsonWebToken>> {
+  ) -> HttpResult<Json<Session>> {
     let mut db = state.postgres.get()?;
 
     AuthService::refresh(&mut db, body.refresh_jwt)

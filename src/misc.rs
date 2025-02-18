@@ -10,7 +10,7 @@ impl AuthorizationBearer for HeaderMap {
     let splitted = self.get("authorization")
       .context(anyhow!("Заголовок Authorization не был предоставлен"))?
       .to_str()?
-      .split("Bearer")
+      .split("Bearer ")
       .collect::<Vec<&str>>();
 
     if splitted.len() != 2 {

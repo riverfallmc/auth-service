@@ -21,7 +21,13 @@ impl TFAService {
   ) -> HttpResult<Json<TFAAddBody>> {
     let id = JWTService::is_active(token)?;
 
+    // TODO @ Въебашить редис
+
     let user = AuthRepository::find(db, id.parse()?)?;
+
+    if user.totp_secret.is_some() {
+      return Err(HttpError::new("К вашему аккаунту уже привязана двуфакторная аутентификация!", Some(StatusCode::BAD_REQUEST)))
+    }
 
     let (secret, totp) = Self::generate_2fa(user.username, None)?;
 

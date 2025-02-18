@@ -19,6 +19,16 @@ impl SessionRepository {
     Ok(())
   }
 
+  pub fn update(
+    db: &mut DbPooled,
+    session_id: i32,
+    jwt: String
+  ) -> HttpResult<Session> {
+    Ok(diesel::update(sessions::table.filter(sessions::columns::id.eq(session_id)))
+      .set(SessionUpdateJwt {jwt})
+      .get_result::<Session>(db)?)
+  }
+
   pub fn add(
     db: &mut DbPooled,
     session: SessionCreate

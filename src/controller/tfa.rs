@@ -12,6 +12,10 @@ pub struct TFAAddBody {
 #[derive(Deserialize)]
 pub struct TFAQuery {
   username: String,
+}
+
+#[derive(Deserialize)]
+pub struct TFALoginBody {
   code: String
 }
 
@@ -52,12 +56,13 @@ impl TFAController {
     headers: HeaderMap,
     State(state): State<ServerState>,
     Query(params): Query<TFAQuery>,
+    Json(body): Json<TFALoginBody>
   ) -> HttpResult<Json<Session>> {
     let user_agent = headers.get_user_agent();
     let mut redis = state.redis.get()?;
     let mut db = state.postgres.get()?;
 
-    TFAService::login(&mut db, &mut redis, params.username, params.code, user_agent)
+    TFAService::login(&mut db, &mut redis, params.username, body.code, user_agent)
       .await
   }
 }

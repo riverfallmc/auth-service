@@ -1,0 +1,51 @@
+data:
+  projectName: smokkkin's rust service builder
+  authors: ["smokingplaya"]
+  description: Build Rust service in one command
+
+configuration:
+  default: buildx
+
+variables:
+  service: auth
+
+tasks:
+  build:
+    description: Builds image of service
+    commands:
+      - sudo docker build -t ${service}-service .
+
+  restart:
+    description: Restarts backend
+    commands:
+      - cd ../backend && sudo puff
+
+  buildx:
+    description: Builds a service and restarts backend
+    commands:
+      - puff build && puff restart
+
+  deploy:
+    description: Builds a image, and push it to the registry
+    commands:
+      - puff build && puff pushimage
+
+  pushimage:
+    description: Pushes the image to the registry
+    commands:
+      - docker push "${HARBOR_SERVER}/riverfall/${service}-service:latest"
+
+  tagimage:
+    description: Tags a image
+    commands:
+      - docker tag ${service}-service:latest ${HARBOR_SERVER}/riverfall/${service}-service:latest
+
+  test:
+    description: Runs tests
+    commands:
+      - cargo test -- --nocapture
+
+  # хз кому это может понадобиться
+  run:
+    commands:
+      - cargo run
