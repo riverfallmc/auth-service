@@ -1,5 +1,5 @@
 use crate::{controller::tfa::TFAAddBody, models::User, repository::auth::AuthRepository, service::{hasher::HasherService, jwt::JWTService, redis::RedisService, session::SessionService }};
-use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
+use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult, NonJsonHttpResult}};
 use serde::{Deserialize, Serialize};
 use reqwest::StatusCode;
 use totp_rs::TOTP;
@@ -16,9 +16,9 @@ pub struct TFAService;
 impl TFAService {
   /// Генерирует TFA Secret
   pub fn add(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     token: String
-  ) -> HttpResult<Json<TFAAddBody>> {
+  ) -> HttpResult<TFAAddBody> {
     let id = JWTService::is_active(token)?;
 
     // TODO @ Въебашить редис
@@ -29,7 +29,7 @@ impl TFAService {
       return Err(HttpError::new("К вашему аккаунту уже привязана двуфакторная аутентификация!", Some(StatusCode::BAD_REQUEST)))
     }
 
-    let (secret, totp) = Self::generate_2fa(user.username, None)?;
+    let axum::Json((secret, totp)) = Self::generate_2fa(user.username, None)?;
 
     Ok(Json(TFAAddBody {
       secret,
@@ -39,15 +39,15 @@ impl TFAService {
 
   /// Привязка 2FA к профилю
   pub fn link(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     token: String,
     code: String,
     secret: String
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let id = JWTService::is_active(token)?;
     let user = AuthRepository::find(db, id.parse()?)?;
 
-    let (_, totp) = TFAService::generate_2fa(user.username.clone(), Some(secret.clone()))?;
+    let axum::Json((_, totp)) = TFAService::generate_2fa(user.username.clone(), Some(secret.clone()))?;
 
     if !totp.check_current(&code)? {
       return Err(HttpError::new("Неверный код", Some(StatusCode::UNAUTHORIZED)));
@@ -60,16 +60,16 @@ impl TFAService {
 
   /// Вход в аккаунт
   pub async fn login(
-    db: &mut DbPooled,
-    redis: &mut RedisPooled,
+    db: &mut Database<Postgres>,
+    redis: &mut Database<Redis>,
     username: String,
     code: String,
     user_agent: String
-  ) -> HttpResult<Json<crate::models::Session>> {
+  ) -> HttpResult<crate::models::Session> {
     let user = TFAService::get_login_attempt(redis, db, username.clone())
       .map_err(|_| HttpError::new("Запрос на авторизацию не найден (возможно, вы не успели)", Some(StatusCode::UNAUTHORIZED)))?;
 
-    let (_, totp) = TFAService::generate_2fa(user.username.clone(), user.totp_secret.clone())?;
+    let axum::Json((_, totp)) = TFAService::generate_2fa(user.username.clone(), user.totp_secret.clone())?;
 
     if !totp.check_current(&code)? {
       return Err(HttpError::new("Неверный код", Some(StatusCode::UNAUTHORIZED)));
@@ -77,9 +77,9 @@ impl TFAService {
 
     TFAService::remove_login_attempt(redis, username)?;
 
-    Ok(Json(
-      SessionService::get(db, user, &user_agent)?
-    ))
+    Ok(
+      SessionService::get(db, (*user).clone(), &user_agent)?
+    )
   }
 
   // Вспомогательные функции
@@ -92,9 +92,9 @@ impl TFAService {
 
   // добавляет в редис
   pub fn add_login_attempt(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     username: String
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let redis_key = Self::generate_redis_2fa_key(username);
 
     RedisService::set_temporarily(redis, &redis_key, 1, 5)?;
@@ -103,24 +103,24 @@ impl TFAService {
   }
 
   fn get_login_attempt(
-    redis: &mut RedisPooled,
-    db: &mut DbPooled,
+    redis: &mut Database<Redis>,
+    db: &mut Database<Postgres>,
     username: String
   ) -> HttpResult<User> {
     let redis_key = Self::generate_redis_2fa_key(username.clone());
 
     RedisService::get::<String>(redis, &redis_key)?;
 
-    AuthRepository::find_by_username(db, &username)
+    Ok(Json(AuthRepository::find_by_username(db, &username)?))
   }
 
   fn remove_login_attempt(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     username: String
-  ) -> HttpResult<()> {
+  ) -> NonJsonHttpResult<()> {
     let redis_key = Self::generate_redis_2fa_key(username);
 
-    RedisService::remove(redis, &redis_key)
+    Ok(RedisService::remove(redis, &redis_key)?)
   }
 
   fn generate_2fa(
@@ -139,6 +139,6 @@ impl TFAService {
       username
     )?;
 
-    Ok((secret, totp))
+    Ok(axum::Json((secret, totp)))
   }
 }

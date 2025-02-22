@@ -1,7 +1,7 @@
 use axum::{extract::{Query, State}, routing::{get, post}, Json};
 use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
 use serde::Deserialize;
-use crate::{models::UserRegister, service::logic::register::RegisterService, ServerState};
+use crate::{models::UserRegister, service::logic::register::RegisterService, AppState};
 
 #[derive(Deserialize)]
 pub struct IdQuery {
@@ -12,9 +12,9 @@ pub struct RegisterController;
 
 impl RegisterController {
   async fn registration(
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Json(body): Json<UserRegister>,
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut redis = state.redis.get()?;
 
     RegisterService::register(&mut redis, body)
@@ -22,9 +22,9 @@ impl RegisterController {
   }
 
   async fn confirm(
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Query(params): Query<IdQuery>,
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut redis = state.redis.get()?;
     let mut db = state.postgres.get()?;
 
@@ -33,8 +33,12 @@ impl RegisterController {
   }
 }
 
-impl Controller<ServerState> for RegisterController {
-  fn register(&self, router: axum::Router<ServerState>) -> axum::Router<ServerState> {
+impl Controller<AppState> for RegisterController {
+  fn new() -> anyhow::Result<Box<Self>> {
+    Ok(Box::new(Self))
+  }
+
+  fn register(&self, router: axum::Router<AppState>) -> axum::Router<AppState> {
     router
       .route("/register", post(Self::registration)) // регистрация
       .route("/confirm", get(Self::confirm)) // подтверждение регистрации

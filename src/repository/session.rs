@@ -1,17 +1,18 @@
 #![allow(dead_code)]
 
+use anyhow::Result;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dixxxie::{connection::DbPooled, response::HttpResult};
+use dixxxie::database::{postgres::Postgres, Database};
 use crate::{models::{Session, SessionCreate, SessionUpdateJwt}, schema::sessions};
 
 pub struct SessionRepository;
 
 impl SessionRepository {
   pub fn update_jwt(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     session_id: i32,
     jwt: String
-  ) -> HttpResult<()> {
+  ) -> Result<()> {
     diesel::update(sessions::table.filter(sessions::columns::id.eq(session_id)))
       .set(SessionUpdateJwt {jwt})
       .execute(db)?;
@@ -20,46 +21,46 @@ impl SessionRepository {
   }
 
   pub fn update(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     session_id: i32,
     jwt: String
-  ) -> HttpResult<Session> {
+  ) -> Result<Session> {
     Ok(diesel::update(sessions::table.filter(sessions::columns::id.eq(session_id)))
       .set(SessionUpdateJwt {jwt})
       .get_result::<Session>(db)?)
   }
 
   pub fn add(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     session: SessionCreate
-  ) -> HttpResult<Session> {
+  ) -> Result<Session> {
     Ok(diesel::insert_into(sessions::table)
       .values(&session)
       .get_result::<Session>(db)?)
   }
 
   pub fn find_by_refresh(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     refresh: String
-  ) -> HttpResult<Session> {
+  ) -> Result<Session> {
     Ok(sessions::table
       .filter(sessions::columns::refresh_token.eq(refresh))
       .first::<Session>(db)?)
   }
 
   pub fn find_by_jwt(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     jwt: String
-  ) -> HttpResult<Session> {
+  ) -> Result<Session> {
     Ok(sessions::table
       .filter(sessions::columns::jwt.eq(jwt))
       .first::<Session>(db)?)
   }
 
   pub fn delete(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     id: i32
-  ) -> HttpResult<()> {
+  ) -> Result<()> {
     diesel::update(sessions::table.filter(sessions::id.eq(id)))
       .set(sessions::is_active.eq(false))
       .execute(db)?;
@@ -68,7 +69,7 @@ impl SessionRepository {
   }
 
   pub fn get(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     user_id: i32,
     user_agent: &str,
   ) -> diesel::result::QueryResult<Session> {

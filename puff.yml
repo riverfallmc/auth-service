@@ -13,7 +13,7 @@ tasks:
   build:
     description: Builds image of service
     commands:
-      - sudo docker build -t ${service}-service .
+      - docker build -t ${service}-service .
 
   restart:
     description: Restarts backend

@@ -1,5 +1,5 @@
 use crate::{models::UserRegister, repository::{auth::AuthRepository, user::UserRepository}, service::{authvalidate::AuthValidateService, hasher::HasherService, mail::{mails::register::RegisterMail, service::MailService}, redis::RedisService}};
-use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpMessage, HttpResult}};
+use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult}};
 use reqwest::StatusCode;
 use axum::Json;
 
@@ -15,9 +15,9 @@ impl RegisterService {
   }
 
   pub async fn register(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     mut user: UserRegister,
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     AuthValidateService::validate(user.clone())?;
     // оверрайдим значение (по идее оно вообще не должно быть документировано) поля salt
     user.salt = Some(HasherService::generate_salt());
@@ -45,10 +45,10 @@ impl RegisterService {
   }
 
   pub async fn confirm(
-    redis: &mut RedisPooled,
-    db: &mut DbPooled,
+    redis: &mut Database<Redis>,
+    db: &mut Database<Postgres>,
     id: String
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let (redis_key, _) = Self::generate_redis_confirm_key(Some(id));
     // ищем запись в редисе
     let record = RedisService::get::<String>(redis, &redis_key)

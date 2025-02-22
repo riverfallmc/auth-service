@@ -1,9 +1,7 @@
-use controller::{auth::AuthController, register::RegisterController, tfa::TFAController};
+use controller::{auth::AuthController, recovery::RecoveryController, register::RegisterController, tfa::TFAController};
 use anyhow::Result;
-use dixxxie::{
-  axum::{self, Router}, connection::{establish_connection, establish_redis_connection, DbPool, RedisPool}, controller::ApplyControllerOnRouter, setup
-};
-use controller::recovery::RecoveryController;
+use dixxxie::{controllers, database::{postgres::Postgres, redis::Redis, Pool, PoolBuilder}, server::WebServer, service::Service};
+use dixxxie::controller::Controller;
 
 mod repository;
 mod controller;
@@ -14,29 +12,25 @@ mod misc;
 
 #[allow(unused)]
 #[derive(Clone)]
-pub struct ServerState {
-  postgres: DbPool,
-  redis: RedisPool
+pub struct AppState {
+  postgres: Pool<Postgres>,
+  redis: Pool<Redis>
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  setup()?;
+  WebServer::enviroment();
 
-  let state = ServerState {
-    postgres: establish_connection()?,
-    redis: establish_redis_connection()?
+  let service = Service {
+    name: "Auth",
+    controllers: controllers![AuthController, RecoveryController, RegisterController, TFAController],
+    state: AppState {
+      postgres: Postgres::create_pool()?,
+      redis: Redis::create_pool()?
+    },
+    port: Some(1337)
   };
 
-  let router = Router::new()
-    .apply_controller(AuthController)
-    .apply_controller(RecoveryController)
-    .apply_controller(RegisterController)
-    .apply_controller(TFAController)
-    .with_state(state);
-
-  let listener = tokio::net::TcpListener::bind("0.0.0.0:80")
-    .await?;
-
-  Ok(axum::serve(listener, router).await?)
+  service.run()
+    .await
 }

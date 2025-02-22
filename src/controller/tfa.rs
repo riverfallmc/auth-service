@@ -1,7 +1,7 @@
 use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
 use axum::{extract::{Query, State}, http::HeaderMap, routing::post, Json};
 use serde::{Deserialize, Serialize};
-use crate::{misc::{AuthorizationBearer, UserAgent}, models::Session, service::logic::tfa::TFAService, ServerState};
+use crate::{misc::{AuthorizationBearer, UserAgent}, models::Session, service::logic::tfa::TFAService, AppState};
 
 #[derive(Deserialize, Serialize)]
 pub struct TFAAddBody {
@@ -31,8 +31,8 @@ impl TFAController {
   /// Генерирует 2FA Secret и отправляет его в виде Json'а
   async fn add(
     headers: HeaderMap,
-    State(state): State<ServerState>,
-  ) -> HttpResult<Json<TFAAddBody>> {
+    State(state): State<AppState>,
+  ) -> HttpResult<TFAAddBody> {
     let mut db = state.postgres.get()?;
     let token = headers.get_bearer()?;
 
@@ -42,9 +42,9 @@ impl TFAController {
   /// Привязывает 2FA Secret к профилю
   async fn link(
     headers: HeaderMap,
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Json(body): Json<TFALinkBody>
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut db = state.postgres.get()?;
     let token = headers.get_bearer()?;
 
@@ -54,10 +54,10 @@ impl TFAController {
   /// Входит в аккаунт
   async fn login(
     headers: HeaderMap,
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Query(params): Query<TFAQuery>,
     Json(body): Json<TFALoginBody>
-  ) -> HttpResult<Json<Session>> {
+  ) -> HttpResult<Session> {
     let user_agent = headers.get_user_agent();
     let mut redis = state.redis.get()?;
     let mut db = state.postgres.get()?;
@@ -67,8 +67,12 @@ impl TFAController {
   }
 }
 
-impl Controller<ServerState> for TFAController {
-  fn register(&self, router: axum::Router<ServerState>) -> axum::Router<ServerState> {
+impl Controller<AppState> for TFAController {
+  fn new() -> anyhow::Result<Box<Self>> {
+    Ok(Box::new(Self))
+  }
+
+  fn register(&self, router: axum::Router<AppState>) -> axum::Router<AppState> {
     router
       .route("/2fa/add", post(Self::add))
       .route("/2fa/link", post(Self::link))

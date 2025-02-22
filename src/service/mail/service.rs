@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::env;
-use dixxxie::response::HttpResult;
+use dixxxie::response::NonJsonHttpResult;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use super::email::Email;
@@ -26,7 +26,7 @@ impl MailService {
   pub async fn send<T>(
     recipient: String,
     mail: T
-  ) -> HttpResult<()>
+  ) -> NonJsonHttpResult<()>
   where
     T: TryInto<Email, Error = anyhow::Error>,
   {

@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use dixxxie::{connection::RedisPooled, redis::{self, Commands}, response::HttpResult};
+use dixxxie::{database::{redis::Redis, Database}, redis::{self, Commands}};
 
 pub struct RedisService;
 
 impl RedisService {
   pub fn get<T>(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     id: &str
   ) -> Result<T>
   where
@@ -17,7 +17,7 @@ impl RedisService {
   }
 
   pub fn set<V>(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     id: &str,
     value: V
   ) -> Result<()>
@@ -28,7 +28,7 @@ impl RedisService {
   }
 
   pub fn set_temporarily<V>(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     id: &str,
     value: V,
     mins: u64
@@ -40,9 +40,9 @@ impl RedisService {
   }
 
   pub fn remove(
-    redis: &mut RedisPooled,
+    redis: &mut Database<Redis>,
     id: &str
-  ) -> HttpResult<()> {
+  ) -> Result<()> {
     Ok(redis.del::<&str, ()>(id)?)
   }
 }

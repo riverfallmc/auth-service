@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use anyhow::{anyhow, Result};
+use axum::Json;
 use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, Algorithm, TokenData};
 use reqwest::StatusCode;
 use serde::{Serialize, Deserialize};
@@ -53,13 +55,13 @@ impl JWTService {
       return Err(HttpError::new("Токен истёк", Some(StatusCode::UNAUTHORIZED)))
     }
 
-    Ok(payload.claims.sub)
+    Ok(axum::Json(payload.claims.sub.clone()))
   }
 
   // генерация jwt (действует 1 час)
   pub fn generate(
     user_id: i32
-  ) -> HttpResult<String> {
+  ) -> Result<String> {
     let claims = Claims {
       sub: user_id.to_string(),
       exp: Self::calculate_exp(60),
@@ -70,13 +72,13 @@ impl JWTService {
       &Header::new(Algorithm::HS256),
       &claims,
       &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
-    ).map_err(|_| HttpError::new("Не получилось сгенерировать JWT", None))
+    ).map_err(|_| anyhow!("Не получилось сгенерировать JWT"))
   }
 
   // генерация refresh токена (действует 7 дней)
   pub fn generate_refresh(
     user_id: i32
-  ) -> HttpResult<String> {
+  ) -> Result<String> {
     let claims = Claims {
       sub: user_id.to_string(),
       exp: Self::calculate_exp(60 * 24 * 7),
@@ -87,19 +89,19 @@ impl JWTService {
       &Header::new(Algorithm::HS256),
       &claims,
       &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
-    ).map_err(|_| HttpError::new("Не получилось сгенерировать Refresh токен", None))
+    ).map_err(|_| anyhow!("Не получилось сгенерировать Refresh токен"))
   }
 
   // декодирование токена и возврат данных
   pub fn decode_token(
     token: &str
   ) -> HttpResult<TokenData<Claims>> {
-    decode::<Claims>(
+    Ok(Json(decode::<Claims>(
       token,
       &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
       &Validation::new(Algorithm::HS256),
     )
-    .map_err(|_| HttpError::new("Невалидный или истёкший токен", Some(StatusCode::UNAUTHORIZED)))
+    .map_err(|_| HttpError::new("Невалидный или истёкший токен", Some(StatusCode::UNAUTHORIZED)))?))
   }
 
   // вычисление времени истечения токена (в секундах)

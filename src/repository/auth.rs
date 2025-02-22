@@ -1,15 +1,15 @@
 #![allow(dead_code)]
 
-use axum::http::StatusCode;
+use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dixxxie::{connection::DbPooled, response::{HttpResult, HttpError}};
+use dixxxie::database::{postgres::Postgres, Database};
 use crate::{models::{User, UserAdd, UserPasswordUpdate}, schema::users};
 
 pub struct AuthRepository;
 
 impl AuthRepository {
   pub fn add(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     user: &UserAdd
   ) -> diesel::result::QueryResult<usize> {
     diesel::insert_into(users::table)
@@ -18,30 +18,30 @@ impl AuthRepository {
   }
 
   pub fn find(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     id: i32
-  ) -> HttpResult<User> {
+  ) -> Result<User> {
     users::table
       .filter(users::columns::id.eq(id))
       .first::<User>(db)
-      .map_err(|_| HttpError::new("Пользователь не был найден", Some(StatusCode::UNAUTHORIZED)))
+      .map_err(|_| anyhow!("Пользователь не был найден"))
   }
 
   pub fn find_by_username(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     username: &String
-  ) -> HttpResult<User> {
+  ) -> Result<User> {
     users::table
       .filter(users::columns::username.eq(username))
       .first::<User>(db)
-      .map_err(|_| HttpError::new("Пользователь не был найден", Some(StatusCode::UNAUTHORIZED)))
+      .map_err(|_| anyhow!("Пользователь не был найден"))
   }
 
   pub fn update(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     id: i32,
     data: UserPasswordUpdate
-  ) -> HttpResult<()> {
+  ) -> Result<()> {
     diesel::update(users::table.filter(users::id.eq(id)))
       .set((
         users::columns::salt.eq(data.salt),
@@ -53,10 +53,10 @@ impl AuthRepository {
   }
 
   pub fn update_totp(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     id: i32,
     secret: String
-  ) -> HttpResult<()> {
+  ) -> Result<()> {
     diesel::update(users::table.filter(users::columns::id.eq(id)))
       .set(users::columns::totp_secret.eq(secret))
       .execute(db)?;

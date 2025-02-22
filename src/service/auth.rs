@@ -3,16 +3,16 @@
 use axum::Json;
 use crate::{models::{BaseUserInfo, Session, UserLogin}, repository::{auth::AuthRepository, session::SessionRepository}, service::jwt::JWTService};
 use super::{hasher::HasherService, logic::tfa::TFAService, session::SessionService};
-use dixxxie::{connection::{DbPooled, RedisPooled}, response::{HttpError, HttpResult}};
+use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpResult}};
 use reqwest::StatusCode;
 
 pub struct AuthService;
 
 impl AuthService {
   pub fn get_owner(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     token: String
-  ) -> HttpResult<Json<BaseUserInfo>> {
+  ) -> HttpResult<BaseUserInfo> {
     let session = SessionService::get_by_jwt(db, token, true)?;
     let user_id = session.user_id;
     let user = AuthRepository::find(db, user_id)?;
@@ -25,11 +25,11 @@ impl AuthService {
 
   // авторизация
   pub async fn login(
-    redis: &mut RedisPooled,
-    db: &mut DbPooled,
+    redis: &mut Database<Redis>,
+    db: &mut Database<Postgres>,
     credentials: UserLogin,
     user_agent: &str
-  ) -> HttpResult<Json<serde_json::Value>> {
+  ) -> HttpResult<serde_json::Value> {
     // ищем юзера по нику
     let user = AuthRepository::find_by_username(db, &credentials.username)?;
     let password = HasherService::sha256(credentials.password + &user.salt);
@@ -51,15 +51,15 @@ impl AuthService {
     // создаем сессию в любом случае
     let session = SessionService::get(db, user, user_agent)?;
 
-    Ok(Json(serde_json::to_value(session)?))
+    Ok(Json(serde_json::to_value((*session).clone())?))
   }
 
   // обновляет и возвращает jwt
   // с помощью refresh токена
   pub async fn refresh(
-    db: &mut DbPooled,
+    db: &mut Database<Postgres>,
     refresh_token: String
-  ) -> HttpResult<Json<Session>> {
+  ) -> HttpResult<Session> {
     let session = SessionService::get_by_refresh(db, refresh_token, true)?;
     let token = JWTService::generate(session.user_id)?;
 

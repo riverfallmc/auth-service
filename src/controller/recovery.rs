@@ -1,7 +1,7 @@
 use axum::{extract::{Query, State}, routing::{get, post}, Json};
 use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
 use serde::Deserialize;
-use crate::{service::logic::recovery::RecoveryService, ServerState};
+use crate::{service::logic::recovery::RecoveryService, AppState};
 
 #[derive(Deserialize)]
 struct EmailBody {
@@ -23,9 +23,9 @@ pub struct RecoveryController;
 
 impl RecoveryController {
   async fn recovery(
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Json(body): Json<EmailBody>,
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut redis = state.redis.get()?;
 
     RecoveryService::recovery(&mut redis, body.email)
@@ -33,9 +33,9 @@ impl RecoveryController {
   }
 
   async fn exist(
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Query(query): Query<RecoveryCode>
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut redis = state.redis.get()?;
 
     RecoveryService::exist(&mut redis, &query.code)
@@ -43,9 +43,9 @@ impl RecoveryController {
 
   #[allow(dead_code)]
   async fn confirm_recovery(
-    State(state): State<ServerState>,
+    State(state): State<AppState>,
     Json(body): Json<ConfirmBody>
-  ) -> HttpResult<Json<HttpMessage>> {
+  ) -> HttpResult<HttpMessage> {
     let mut db = state.postgres.get()?;
     let mut redis = state.redis.get()?;
 
@@ -54,8 +54,12 @@ impl RecoveryController {
   }
 }
 
-impl Controller<ServerState> for RecoveryController {
-  fn register(&self, router: axum::Router<ServerState>) -> axum::Router<ServerState> {
+impl Controller<AppState> for RecoveryController {
+  fn new() -> anyhow::Result<Box<Self>> {
+    Ok(Box::new(Self))
+  }
+
+  fn register(&self, router: axum::Router<AppState>) -> axum::Router<AppState> {
     router
       .route("/recovery", post(Self::recovery))
       .route("/recoveryExist", get(Self::exist))

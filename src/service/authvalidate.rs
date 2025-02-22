@@ -1,4 +1,4 @@
-use dixxxie::response::{HttpError, HttpResult};
+use dixxxie::response::{HttpError, NonJsonHttpResult};
 use reqwest::StatusCode;
 
 use crate::models::UserRegister;
@@ -15,7 +15,7 @@ impl AuthValidateService {
   fn validate_spell(
     text: String,
     kind: &str
-  ) -> HttpResult<()> {
+  ) -> NonJsonHttpResult<()> {
     if text.is_empty() ||
     !text.chars().all(|c| c.is_alphanumeric() || c == '_') ||
     !text.chars().any(|c| c.is_alphanumeric())
@@ -30,7 +30,7 @@ impl AuthValidateService {
 
   pub fn validate_username(
     username: String
-  ) -> HttpResult<()> {
+  ) -> NonJsonHttpResult<()> {
     if !(MIN_USERNAME..=MAX_USERNAME).contains(&username.len()) {
       return Err(HttpError::new("Никнейм должен быть больше 4 и меньше 17 символов", Some(StatusCode::BAD_REQUEST)))
     }
@@ -40,7 +40,7 @@ impl AuthValidateService {
 
   pub fn validate_password(
     password: String
-  ) -> HttpResult<()> {
+  ) -> NonJsonHttpResult<()> {
     if !(MIN_PASSWORD..=MAX_PASSWORD).contains(&password.len()) {
       return Err(HttpError::new("Пароль должен быть больше 7 и меньше 33 символов", Some(StatusCode::BAD_REQUEST)))
     }
@@ -50,7 +50,7 @@ impl AuthValidateService {
 
   pub fn validate(
     user: UserRegister
-  ) -> HttpResult<()> {
+  ) -> NonJsonHttpResult<()> {
     Self::validate_username(user.username.clone())?;
     Self::validate_password(user.password.clone())?;
 

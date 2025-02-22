@@ -3,7 +3,6 @@
 use std::env;
 use crate::{models::{User, UserCreate, UserInUserService}, schema::users};
 use anyhow::{bail, Result};
-use dixxxie::{connection::{DbPool, DbPooled}, response::HttpResult};
 use diesel::{insert_into, ExpressionMethods, QueryDsl, RunQueryDsl};
 use once_cell::sync::Lazy;
 use reqwest::Client;
