@@ -2,7 +2,7 @@
 
 use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dixxxie::database::{postgres::Postgres, Database};
+use adjust::database::{postgres::Postgres, Database};
 use crate::{models::{User, UserAdd, UserPasswordUpdate}, schema::users};
 
 pub struct AuthRepository;

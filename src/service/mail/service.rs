@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::env;
-use dixxxie::response::NonJsonHttpResult;
+use adjust::response::NonJsonHttpResult;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use super::email::Email;

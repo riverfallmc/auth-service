@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use axum::{http::StatusCode, Json};
-use dixxxie::{database::{postgres::Postgres, Database}, response::{HttpError, HttpResult, NonJsonHttpResult}};
+use adjust::{database::{postgres::Postgres, Database}, response::{HttpError, HttpResult, NonJsonHttpResult}};
 use crate::{models::{Session, SessionCreate, User}, repository::session::SessionRepository, service::jwt::JWTService};
 use super::time::TimeService;
 

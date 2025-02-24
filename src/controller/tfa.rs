@@ -1,4 +1,4 @@
-use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
+use adjust::{controller::Controller, response::{HttpMessage, HttpResult}};
 use axum::{extract::{Query, State}, http::HeaderMap, routing::post, Json};
 use serde::{Deserialize, Serialize};
 use crate::{misc::{AuthorizationBearer, UserAgent}, models::Session, service::logic::tfa::TFAService, AppState};

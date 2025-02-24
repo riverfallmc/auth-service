@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dixxxie::database::{postgres::Postgres, Database};
+use adjust::database::{postgres::Postgres, Database};
 use crate::{models::{Session, SessionCreate, SessionUpdateJwt}, schema::sessions};
 
 pub struct SessionRepository;

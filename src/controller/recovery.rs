@@ -1,5 +1,5 @@
 use axum::{extract::{Query, State}, routing::{get, post}, Json};
-use dixxxie::{controller::Controller, response::{HttpMessage, HttpResult}};
+use adjust::{controller::Controller, response::{HttpMessage, HttpResult}};
 use serde::Deserialize;
 use crate::{service::logic::recovery::RecoveryService, AppState};
 

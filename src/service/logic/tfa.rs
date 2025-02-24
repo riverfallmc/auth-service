@@ -1,5 +1,5 @@
 use crate::{controller::tfa::TFAAddBody, models::User, repository::auth::AuthRepository, service::{hasher::HasherService, jwt::JWTService, redis::RedisService, session::SessionService }};
-use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult, NonJsonHttpResult}};
+use adjust::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult, NonJsonHttpResult}};
 use serde::{Deserialize, Serialize};
 use reqwest::StatusCode;
 use totp_rs::TOTP;
@@ -77,9 +77,7 @@ impl TFAService {
 
     TFAService::remove_login_attempt(redis, username)?;
 
-    Ok(
-      SessionService::get(db, (*user).clone(), &user_agent)?
-    )
+    SessionService::get(db, (*user).clone(), &user_agent)
   }
 
   // Вспомогательные функции

@@ -1,7 +1,6 @@
+use std::sync::Arc;
 use controller::{auth::AuthController, recovery::RecoveryController, register::RegisterController, tfa::TFAController};
-use anyhow::Result;
-use dixxxie::{controllers, database::{postgres::Postgres, redis::Redis, Pool, PoolBuilder}, server::WebServer, service::Service};
-use dixxxie::controller::Controller;
+use adjust::{main, controllers, database::{postgres::Postgres, redis::Redis, Pool}, controller::Controller, service::Service};
 
 mod repository;
 mod controller;
@@ -11,26 +10,18 @@ mod schema;
 mod misc;
 
 #[allow(unused)]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct AppState {
-  postgres: Pool<Postgres>,
+  postgres: Arc<Pool<Postgres>>,
   redis: Pool<Redis>
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-  WebServer::enviroment();
-
-  let service = Service {
+#[main]
+async fn main() -> Service<'_, AppState> {
+  Service {
     name: "Auth",
     controllers: controllers![AuthController, RecoveryController, RegisterController, TFAController],
-    state: AppState {
-      postgres: Postgres::create_pool()?,
-      redis: Redis::create_pool()?
-    },
-    port: Some(1337)
-  };
-
-  service.run()
-    .await
+    state: AppState::default(),
+    ..Default::default()
+  }
 }

@@ -1,5 +1,5 @@
 use axum::{extract::State, http::HeaderMap, routing::post, Json};
-use dixxxie::{controller::Controller, response::HttpResult};
+use adjust::{controller::Controller, response::HttpResult};
 use serde::{Deserialize, Serialize};
 use crate::{misc::UserAgent, models::{BaseUserInfo, Session, UserLogin}, service::auth::AuthService, AppState};
 

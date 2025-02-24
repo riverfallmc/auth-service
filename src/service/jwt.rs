@@ -5,7 +5,7 @@ use axum::Json;
 use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, Algorithm, TokenData};
 use reqwest::StatusCode;
 use serde::{Serialize, Deserialize};
-use dixxxie::response::{HttpError, HttpResult};
+use adjust::response::{HttpError, HttpResult};
 
 use super::time::TimeService;
 

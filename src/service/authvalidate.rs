@@ -1,4 +1,4 @@
-use dixxxie::response::{HttpError, NonJsonHttpResult};
+use adjust::response::{HttpError, NonJsonHttpResult};
 use reqwest::StatusCode;
 
 use crate::models::UserRegister;

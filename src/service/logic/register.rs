@@ -1,5 +1,5 @@
 use crate::{models::UserRegister, repository::{auth::AuthRepository, user::UserRepository}, service::{authvalidate::AuthValidateService, hasher::HasherService, mail::{mails::register::RegisterMail, service::MailService}, redis::RedisService}};
-use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult}};
+use adjust::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult}};
 use reqwest::StatusCode;
 use axum::Json;
 

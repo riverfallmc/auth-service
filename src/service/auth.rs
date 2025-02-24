@@ -3,7 +3,7 @@
 use axum::Json;
 use crate::{models::{BaseUserInfo, Session, UserLogin}, repository::{auth::AuthRepository, session::SessionRepository}, service::jwt::JWTService};
 use super::{hasher::HasherService, logic::tfa::TFAService, session::SessionService};
-use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpResult}};
+use adjust::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpResult}};
 use reqwest::StatusCode;
 
 pub struct AuthService;

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use dixxxie::{database::{redis::Redis, Database}, redis::{self, Commands}};
+use adjust::{database::{redis::Redis, Database}, redis::{self, Commands}};
 
 pub struct RedisService;
 

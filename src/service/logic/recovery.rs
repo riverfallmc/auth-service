@@ -1,6 +1,6 @@
 use anyhow::Result;
 use axum::Json;
-use dixxxie::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult}};
+use adjust::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult}};
 use reqwest::StatusCode;
 use crate::{models::UserPasswordUpdate, repository::{auth::AuthRepository, user::UserRepository}, service::{authvalidate::AuthValidateService, hasher::HasherService, mail::{mails::recovery::RecoveryMail, service::MailService}, redis::RedisService}};
 
