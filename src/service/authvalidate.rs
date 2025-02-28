@@ -18,7 +18,7 @@ impl AuthValidateService {
   ) -> NonJsonHttpResult<()> {
     if text.is_empty() ||
     !text.chars().all(|c| c.is_alphanumeric() || c == '_') ||
-    !text.chars().any(|c| c.is_alphanumeric())
+    !text.chars().all(|c| c.is_numeric())
     {
       let msg = format!("{kind} должен содержать хотя бы одну букву или цифру, и может содержать только буквы (a-Z), цифры (0-9) и подчёркивания (_)");
 

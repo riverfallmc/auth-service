@@ -21,7 +21,6 @@ async fn main() -> Service<'_, AppState> {
   Service {
     name: "Auth",
     controllers: controllers![AuthController, RecoveryController, RegisterController, TFAController],
-    state: AppState::default(),
     ..Default::default()
   }
 }
