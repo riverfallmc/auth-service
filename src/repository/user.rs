@@ -1,18 +1,16 @@
 #![allow(unused)]
 
-use std::env;
+use std::{env, sync::LazyLock};
 use crate::{models::{User, UserCreate, UserInUserService}, schema::users};
+use adjust::load_env;
 use anyhow::{bail, Result};
 use diesel::{insert_into, ExpressionMethods, QueryDsl, RunQueryDsl};
-use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-static CLIENT: Lazy<Client> = Lazy::new(Client::new);
-static USER_URL: Lazy<String> = Lazy::new(|| {
-  env::var("USER_URL")
-    .expect("The USER_URL environment variable was not found!")
-});
+static CLIENT: LazyLock<Client> = LazyLock::new(Client::new);
+
+load_env!(USER_URL);
 
 #[derive(Deserialize)]
 struct Response {
@@ -25,7 +23,7 @@ pub struct UserRepository;
 impl UserRepository {
   pub async fn add(
     user: UserCreate
-  ) -> Result<()> {
+  ) -> Result<UserInUserService> {
     let res = CLIENT.post(format!("http://{}/user", *USER_URL))
       .json(&user)
       .send()
@@ -34,18 +32,21 @@ impl UserRepository {
 
     let status = res.status();
 
-    let json = res.json::<Response>()
-      .await?;
-
     if !status.is_success() {
+      let json = res.json::<Response>()
+        .await?;
+
       bail!(json.message);
     }
 
-    Ok(())
+    let json = res.json::<UserInUserService>()
+      .await?;
+
+    Ok(json)
   }
 
   pub async fn find_by_email(
-    email: String
+    email: &str
   ) -> Result<UserInUserService> {
     let res = CLIENT.get(format!("http://{}/user/0?email={}", *USER_URL, email))
       .send()

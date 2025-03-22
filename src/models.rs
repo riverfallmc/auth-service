@@ -11,6 +11,8 @@ use crate::schema::{sessions, users};
 pub struct User {
   #[diesel(sql_type = Integer)]
   pub id: i32,
+  #[diesel(sql_type = Integer)]
+  pub user_id: i32,
   #[diesel(sql_type = Text)]
   pub username: String,
   #[diesel(sql_type = Text)]
@@ -28,6 +30,7 @@ pub struct UserInUserService {
   pub id: i32,
   pub username: String,
   pub email: String,
+  pub friends: Vec<i32>,
   pub rank: String,
   pub registered_at: NaiveDateTime
 }
@@ -41,6 +44,8 @@ pub struct UserPasswordUpdate {
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
 #[diesel(table_name = users)]
 pub struct UserAdd {
+  /// Айди пользователя из сервиса user
+  pub user_id: Option<i32>,
   pub username: String,
   pub password: String,
   pub salt: String
@@ -80,6 +85,7 @@ impl From<UserRegister> for UserCreate {
 impl From<UserRegister> for UserAdd {
   fn from(value: UserRegister) -> Self {
     UserAdd {
+      user_id: None,
       username: value.username,
       password: value.password,
       // использовать unwrap в этом случае - не безответственно
@@ -118,6 +124,8 @@ pub struct Session {
   pub id: i32,
   #[diesel(sql_type = Integer)]
   pub user_id: i32,
+  #[diesel(sql_type = Integer)]
+  pub global_id: i32,
   #[diesel(sql_type = Text)]
   pub useragent: String,
   #[diesel(sql_type = Text)]
@@ -136,6 +144,8 @@ pub struct Session {
 pub struct SessionCreate {
   #[diesel(sql_type = Integer)]
   pub user_id: i32,
+  #[diesel(sql_type = Integer)]
+  pub global_id: i32,
   #[diesel(sql_type = Text)]
   pub useragent: String,
   #[diesel(sql_type = Text)]

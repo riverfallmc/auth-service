@@ -34,7 +34,7 @@ impl RecoveryService {
       return Err(HttpError::new("Вы уже имеете запрос на сброс пароля", Some(StatusCode::BAD_REQUEST)));
     }
 
-    let user = UserRepository::find_by_email(email.clone())
+    let user = UserRepository::find_by_email(&email)
       .await?;
 
     let code = Self::add_record(redis, &email)
@@ -94,7 +94,7 @@ impl RecoveryService {
 
     AuthValidateService::validate_password(password.clone())?;
 
-    let userdata = UserRepository::find_by_email(email.to_string())
+    let userdata = UserRepository::find_by_email(&email)
       .await?;
 
     let user = AuthRepository::find(db, userdata.id)?;

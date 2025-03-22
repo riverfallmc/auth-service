@@ -21,7 +21,7 @@ impl TryFrom<RegisterMail> for Email {
   fn try_from(value: RegisterMail) -> anyhow::Result<Self> {
     let mut context = HashMap::new();
     context.insert("username".to_string(), value.username);
-    context.insert("url".to_string(), value.url);
+    context.insert("confirm_url".to_string(), value.url);
 
     Email::new(
       "data/templates/register.html".to_string(),

@@ -16,6 +16,7 @@ impl SessionService {
   ) -> HttpResult<Session> {
     let session = SessionCreate {
       user_id: user.id,
+      global_id: user.user_id,
       useragent: user_agent.to_owned(),
       jwt: JWTService::generate(user.id)?,
       refresh_token: JWTService::generate_refresh(user.id)?,

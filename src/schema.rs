@@ -4,6 +4,7 @@ diesel::table! {
     sessions (id) {
         id -> Int4,
         user_id -> Int4,
+        global_id -> Int4,
         useragent -> Text,
         jwt -> Text,
         refresh_token -> Text,
@@ -15,6 +16,7 @@ diesel::table! {
 diesel::table! {
     users (id) {
         id -> Int4,
+        user_id -> Int4,
         username -> Text,
         password -> Text,
         salt -> Text,

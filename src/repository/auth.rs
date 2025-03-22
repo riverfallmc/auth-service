@@ -2,8 +2,13 @@
 
 use anyhow::{anyhow, Result};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use adjust::database::{postgres::Postgres, Database};
+use adjust::{database::{postgres::Postgres, Database}, response::{HttpError, NonJsonHttpResult}};
+use reqwest::StatusCode;
 use crate::{models::{User, UserAdd, UserPasswordUpdate}, schema::users};
+
+use super::user::UserRepository;
+
+const USER_EXISTS: &str = "Пользователь уже существует";
 
 pub struct AuthRepository;
 
@@ -35,6 +40,30 @@ impl AuthRepository {
       .filter(users::columns::username.eq(username))
       .first::<User>(db)
       .map_err(|_| anyhow!("Пользователь не был найден"))
+  }
+
+  pub async fn check_userdata_taken(
+    db: &mut Database<Postgres>,
+    username: &str,
+    email: &str
+  ) -> NonJsonHttpResult<()> {
+    // ищем в бд сервиса
+    let user = users::table
+      .filter(users::username.eq(username))
+      .first::<User>(db);
+
+    // если юзера нет в бд, то ищем занята ли почта
+    if user.is_err() {
+      let user = UserRepository::find_by_email(email)
+        .await;
+
+      // ну типо все заебис и почта свободна
+      if user.is_err() {
+        return Ok(())
+      }
+    }
+
+    Err(HttpError::new(USER_EXISTS, Some(StatusCode::BAD_REQUEST)))
   }
 
   pub fn update(

@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "adjust"
-version = "0.1.24"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ffd42c4ddb46c90bf24add484471bd9904e8f371fd2de869827ef98cc29cbdf"
+checksum = "0becdf9c22ea0a7abef6b97a122ce53105230b7245f29ef2d5518d62afe2437d"
 dependencies = [
  "adjust_macro",
  "anyhow",
@@ -145,7 +145,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "auth-service"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "adjust",
  "anyhow",
@@ -160,7 +160,6 @@ dependencies = [
  "jsonwebtoken",
  "lazy_static",
  "log",
- "once_cell",
  "rand",
  "reqwest",
  "serde",

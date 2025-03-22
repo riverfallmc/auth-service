@@ -133,7 +133,7 @@ impl TFAService {
       1,
       30,
       secret.as_bytes().to_vec(),
-      Some(String::from("serenitymc.ru")),
+      Some(String::from("riverfallmc.ru")),
       username
     )?;
 

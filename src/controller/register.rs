@@ -15,9 +15,10 @@ impl RegisterController {
     State(state): State<AppState>,
     Json(body): Json<UserRegister>,
   ) -> HttpResult<HttpMessage> {
+    let mut db = state.postgres.get()?;
     let mut redis = state.redis.get()?;
 
-    RegisterService::register(&mut redis, body)
+    RegisterService::register(&mut db, &mut redis, body)
       .await
   }
 
