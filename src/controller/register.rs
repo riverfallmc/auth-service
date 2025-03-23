@@ -42,6 +42,6 @@ impl Controller<AppState> for RegisterController {
   fn register(&self, router: axum::Router<AppState>) -> axum::Router<AppState> {
     router
       .route("/register", post(Self::registration)) // регистрация
-      .route("/confirm", get(Self::confirm)) // подтверждение регистрации
+      .route("/register/confirm", get(Self::confirm)) // подтверждение регистрации
   }
 }
