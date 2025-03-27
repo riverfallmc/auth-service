@@ -1,7 +1,7 @@
 use adjust::{controller::Controller, response::{HttpMessage, HttpResult}};
-use axum::{extract::{Query, State}, http::HeaderMap, routing::post, Json, Router};
+use axum::{extract::{Path, Query, State}, http::HeaderMap, routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
-use crate::{misc::{AuthorizationBearer, UserAgent}, models::Session, service::logic::tfa::TFAService, AppState};
+use crate::{misc::UserAgent, models::Session, service::logic::tfa::TFAService, AppState};
 
 #[derive(Deserialize, Serialize)]
 pub struct TFAAddBody {
@@ -30,25 +30,23 @@ pub struct TFAController;
 impl TFAController {
   /// Генерирует 2FA Secret и отправляет его в виде Json'а
   async fn add(
-    headers: HeaderMap,
     State(state): State<AppState>,
+    Path(id): Path<i32>
   ) -> HttpResult<TFAAddBody> {
     let mut db = state.postgres.get()?;
-    let token = headers.get_bearer()?;
 
-    TFAService::add(&mut db, token)
+    TFAService::add(&mut db, id)
   }
 
   /// Привязывает 2FA Secret к профилю
   async fn link(
-    headers: HeaderMap,
     State(state): State<AppState>,
+    Path(id): Path<i32>,
     Json(body): Json<TFALinkBody>
   ) -> HttpResult<HttpMessage> {
     let mut db = state.postgres.get()?;
-    let token = headers.get_bearer()?;
 
-    TFAService::link(&mut db, token, body.code, body.secret)
+    TFAService::link(&mut db, id, body.code, body.secret)
   }
 
   /// Входит в аккаунт
@@ -76,8 +74,8 @@ impl Controller<AppState> for TFAController {
     router
       .nest("/2fa",
         Router::new()
-          .route("/add", post(Self::add))
-          .route("/link", post(Self::link))
+          .route("/add/{id}", post(Self::add))
+          .route("/link/{id}", post(Self::link))
           .route("/login", post(Self::login))
       )
   }

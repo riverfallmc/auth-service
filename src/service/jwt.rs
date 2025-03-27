@@ -30,7 +30,6 @@ impl JWTService {
       .collect::<Vec<&str>>();
 
     if parts.len() != 3 {
-      println!("3");
       return false; // Неправильный формат JWT
     }
 

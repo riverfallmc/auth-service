@@ -1,4 +1,4 @@
-use crate::{controller::tfa::TFAAddBody, models::User, repository::auth::AuthRepository, service::{hasher::HasherService, jwt::JWTService, redis::RedisService, session::SessionService }};
+use crate::{controller::tfa::TFAAddBody, models::User, repository::auth::AuthRepository, service::{hasher::HasherService, redis::RedisService, session::SessionService }};
 use adjust::{database::{postgres::Postgres, redis::Redis, Database}, response::{HttpError, HttpMessage, HttpResult, NonJsonHttpResult}};
 use serde::{Deserialize, Serialize};
 use reqwest::StatusCode;
@@ -17,13 +17,11 @@ impl TFAService {
   /// Генерирует TFA Secret
   pub fn add(
     db: &mut Database<Postgres>,
-    token: String
+    user_id: i32
   ) -> HttpResult<TFAAddBody> {
-    let id = JWTService::is_active(token)?;
-
     // TODO @ Въебашить редис
 
-    let user = AuthRepository::find(db, id.parse()?)?;
+    let user = AuthRepository::find(db, user_id)?;
 
     if user.totp_secret.is_some() {
       return Err(HttpError::new("К вашему аккаунту уже привязана двуфакторная аутентификация!", Some(StatusCode::BAD_REQUEST)))
@@ -40,12 +38,11 @@ impl TFAService {
   /// Привязка 2FA к профилю
   pub fn link(
     db: &mut Database<Postgres>,
-    token: String,
+    user_id: i32,
     code: String,
     secret: String
   ) -> HttpResult<HttpMessage> {
-    let id = JWTService::is_active(token)?;
-    let user = AuthRepository::find(db, id.parse()?)?;
+    let user = AuthRepository::find(db, user_id)?;
 
     let axum::Json((_, totp)) = TFAService::generate_2fa(user.username.clone(), Some(secret.clone()))?;
 
