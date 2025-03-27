@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use controller::{auth::AuthController, recovery::RecoveryController, register::RegisterController, tfa::TFAController};
+use controller::{auth::AuthController, recovery::RecoveryController, register::RegisterController, sessions::SessionsController, tfa::TFAController};
 use adjust::{main, controllers, database::{postgres::Postgres, redis::Redis, Pool}, controller::Controller, service::Service};
 
 mod repository;
@@ -20,7 +20,7 @@ pub struct AppState {
 async fn main() -> Service<'_, AppState> {
   Service {
     name: "Auth",
-    controllers: controllers![AuthController, RecoveryController, RegisterController, TFAController],
+    controllers: controllers![AuthController, SessionsController, RecoveryController, RegisterController, TFAController],
     ..Default::default()
   }
 }
