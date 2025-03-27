@@ -1,5 +1,5 @@
 use adjust::{controller::Controller, response::{HttpMessage, HttpResult}};
-use axum::{extract::{Query, State}, http::HeaderMap, routing::post, Json};
+use axum::{extract::{Query, State}, http::HeaderMap, routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
 use crate::{misc::{AuthorizationBearer, UserAgent}, models::Session, service::logic::tfa::TFAService, AppState};
 
@@ -72,10 +72,13 @@ impl Controller<AppState> for TFAController {
     Ok(Box::new(Self))
   }
 
-  fn register(&self, router: axum::Router<AppState>) -> axum::Router<AppState> {
+  fn register(&self, router: Router<AppState>) -> Router<AppState> {
     router
-      .route("/2fa/add", post(Self::add))
-      .route("/2fa/link", post(Self::link))
-      .route("/2fa/login", post(Self::login))
+      .nest("/2fa",
+        Router::new()
+          .route("/add", post(Self::add))
+          .route("/link", post(Self::link))
+          .route("/login", post(Self::login))
+      )
   }
 }

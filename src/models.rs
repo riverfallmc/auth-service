@@ -138,6 +138,16 @@ pub struct Session {
   pub last_activity: NaiveDateTime,
 }
 
+#[derive(Queryable, Selectable, Serialize, Deserialize, Clone)]
+#[diesel(table_name = sessions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SessionSafe {
+  pub id: i32,
+  pub global_id: i32,
+  pub useragent: String,
+  pub last_activity: NaiveDateTime
+}
+
 #[derive(Queryable, Selectable, Insertable, Serialize, Deserialize, Clone)]
 #[diesel(table_name = sessions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use adjust::database::{postgres::Postgres, Database};
-use crate::{models::{Session, SessionCreate, SessionUpdateJwt}, schema::sessions};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use adjust::{database::{postgres::Postgres, Database}, response::{HttpError, NonJsonHttpResult}};
+use crate::{models::{Session, SessionCreate, SessionSafe, SessionUpdateJwt}, schema::sessions};
 
 pub struct SessionRepository;
 
@@ -66,6 +66,22 @@ impl SessionRepository {
       .execute(db)?;
 
     Ok(())
+  }
+
+  pub fn get_sessions(
+    db: &mut Database<Postgres>,
+    user_id: i32
+  ) -> NonJsonHttpResult<Vec<SessionSafe>> {
+    sessions::table
+      .filter(sessions::global_id.eq(user_id).and(sessions::is_active.eq(true)))
+      .select((
+        sessions::id,
+        sessions::global_id,
+        sessions::useragent,
+        sessions::last_activity,
+      ))
+      .get_results::<SessionSafe>(db)
+      .map_err(|_| HttpError::new("Сессии не были найдены", None))
   }
 
   pub fn get(
